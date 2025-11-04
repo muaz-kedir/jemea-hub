@@ -3,16 +3,40 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Link, useNavigate } from "react-router-dom";
 import { Chrome, Facebook } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState } from "react";
+import { toast } from "sonner";
 
 const Login = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { signIn } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      await signIn(email, password);
+      toast.success("Logged in successfully!");
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to log in");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AuthLayout>
       <div className="max-w-md mx-auto animate-slide-up">
         <h1 className="text-3xl font-bold mb-8">Login</h1>
 
-        <form className="space-y-5">
+        <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="email" className="text-sm">E-mail</Label>
             <Input
@@ -20,6 +44,9 @@ const Login = () => {
               type="email"
               placeholder="example@email.com"
               className="h-12 rounded-2xl bg-secondary border-0"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
             />
           </div>
 
@@ -30,6 +57,9 @@ const Login = () => {
               type="password"
               placeholder="Enter Password"
               className="h-12 rounded-2xl bg-secondary border-0"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
             />
           </div>
 
@@ -45,8 +75,13 @@ const Login = () => {
             </Link>
           </div>
 
-          <Button className="w-full h-12 rounded-full navy-bg hover:opacity-90 text-white" size="lg">
-            log in
+          <Button 
+            type="submit" 
+            className="w-full h-12 rounded-full navy-bg hover:opacity-90 text-white" 
+            size="lg"
+            disabled={loading}
+          >
+            {loading ? "Logging in..." : "log in"}
           </Button>
 
           <div className="text-center">
