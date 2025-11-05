@@ -1,8 +1,24 @@
-import { Bell, Menu, User, BookOpen, Video, Award, Calendar, FileText, Users } from "lucide-react";
+import { Bell, Menu, User, BookOpen, Video, Award, Calendar, FileText, Users, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const Dashboard = () => {
+  const { userProfile, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast.success("Logged out successfully");
+      navigate("/login");
+    } catch (error) {
+      toast.error("Failed to logout");
+    }
+  };
+
   const menuItems = [
     { icon: BookOpen, label: "Library", color: "bg-blue-500" },
     { icon: Video, label: "Tutorials", color: "bg-purple-500" },
@@ -23,16 +39,26 @@ const Dashboard = () => {
                 <User className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="text-white/70 text-sm">STD-1420</p>
-                <h2 className="text-white font-semibold">Student Name</h2>
+                <p className="text-white/70 text-sm">
+                  Assalamu Alaikum
+                </p>
+                <h2 className="text-white font-semibold">
+                  {userProfile?.firstName || userProfile?.email?.split('@')[0] || 'Student'}
+                </h2>
               </div>
             </div>
             <div className="flex gap-2">
               <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-2xl">
                 <Bell className="w-5 h-5" />
               </Button>
-              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-2xl">
-                <Menu className="w-5 h-5" />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-white hover:bg-white/10 rounded-2xl"
+                onClick={handleLogout}
+                title="Logout"
+              >
+                <LogOut className="w-5 h-5" />
               </Button>
             </div>
           </div>

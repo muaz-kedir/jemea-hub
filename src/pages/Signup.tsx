@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -14,8 +14,15 @@ const Signup = () => {
   const [name, setName] = useState("");
   const [role, setRole] = useState<UserRole>("student");
   const [loading, setLoading] = useState(false);
-  const { signUp } = useAuth();
+  const { signUp, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate("/home", { replace: true });
+    }
+  }, [user, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,9 +31,10 @@ const Signup = () => {
     try {
       await signUp(email, password, role);
       toast.success("Account created successfully!");
-      navigate("/welcome");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to sign up");
+      navigate("/home");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to sign up";
+      toast.error(message);
     } finally {
       setLoading(false);
     }

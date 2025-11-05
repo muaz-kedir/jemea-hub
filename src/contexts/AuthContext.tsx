@@ -6,7 +6,7 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged
 } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
 export type UserRole = "student" | "tutor" | "trainer" | "librarian" | "super_admin";
@@ -29,6 +29,8 @@ interface AuthContextType {
   signUp: (email: string, password: string, role: UserRole) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
+  assignRole: (userId: string, role: UserRole) => Promise<void>;
+  getAllUsers: () => Promise<Array<UserProfile & { email: string }>>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -129,8 +131,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await firebaseSignOut(auth);
   };
 
+  const assignRole = async (userId: string, role: UserRole) => {
+    if (!user || !userProfile || userProfile.role !== "super_admin") {
+      throw new Error("Only super_admin can assign roles");
+    }
+
+    // Update role in user_roles collection
+    await setDoc(doc(db, "user_roles", userId), {
+      userId,
+      role,
+      assignedAt: new Date(),
+      assignedBy: user.uid
+    });
+  };
+
+  const getAllUsers = async (): Promise<Array<UserProfile & { email: string }>> => {
+    if (!user || !userProfile || userProfile.role !== "super_admin") {
+      throw new Error("Only super_admin can view all users");
+    }
+
+    const usersSnapshot = await getDocs(collection(db, "users"));
+    const rolesSnapshot = await getDocs(collection(db, "user_roles"));
+
+    const rolesMap = new Map();
+    rolesSnapshot.docs.forEach(doc => {
+      rolesMap.set(doc.id, doc.data().role);
+    });
+
+    const users = usersSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        uid: doc.id,
+        email: data.email || "",
+        role: rolesMap.get(doc.id) || "student",
+        firstName: data.firstName,
+        lastName: data.lastName,
+        department: data.department,
+        year: data.year,
+      } as UserProfile & { email: string };
+    });
+
+    return users;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading, signIn, signUp, signOut, updateProfile }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      userProfile, 
+      loading, 
+      signIn, 
+      signUp, 
+      signOut, 
+      updateProfile,
+      assignRole,
+      getAllUsers
+    }}>
       {children}
     </AuthContext.Provider>
   );

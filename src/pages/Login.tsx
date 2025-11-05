@@ -6,15 +6,22 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Link, useNavigate } from "react-router-dom";
 import { Chrome, Facebook } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate("/home", { replace: true });
+    }
+  }, [user, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,9 +30,10 @@ const Login = () => {
     try {
       await signIn(email, password);
       toast.success("Logged in successfully!");
-      navigate("/role-redirect");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to log in");
+      navigate("/home");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to log in";
+      toast.error(message);
     } finally {
       setLoading(false);
     }

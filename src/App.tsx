@@ -39,7 +39,10 @@ const App = () => (
             <Route path="/role-select" element={<RoleSelect />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
             
-            {/* Role-based redirect */}
+            {/* Home route - redirects to role-based dashboard */}
+            <Route path="/home" element={<ProtectedRoute><RoleBasedRedirect /></ProtectedRoute>} />
+            
+            {/* Role-based redirect (legacy) */}
             <Route path="/role-redirect" element={<ProtectedRoute><RoleBasedRedirect /></ProtectedRoute>} />
             
             {/* Protected routes */}
