@@ -2,16 +2,17 @@ import { AuthLayout } from "@/components/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [role, setRole] = useState<UserRole>("student");
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ const Signup = () => {
     setLoading(true);
     
     try {
-      await signUp(email, password);
+      await signUp(email, password, role);
       toast.success("Account created successfully!");
       navigate("/welcome");
     } catch (error: any) {
@@ -34,13 +35,6 @@ const Signup = () => {
     <AuthLayout>
       <div className="max-w-md mx-auto animate-slide-up">
         <h1 className="text-3xl font-bold mb-6">Signup</h1>
-
-        <Tabs defaultValue="student" className="mb-6">
-          <TabsList className="grid w-full grid-cols-2 h-12 rounded-full bg-secondary">
-            <TabsTrigger value="student" className="rounded-full">Student</TabsTrigger>
-            <TabsTrigger value="company" className="rounded-full">Company</TabsTrigger>
-          </TabsList>
-        </Tabs>
 
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="space-y-2">
@@ -79,6 +73,21 @@ const Signup = () => {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="role" className="text-sm">Select Role</Label>
+            <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
+              <SelectTrigger className="h-12 rounded-2xl bg-secondary border-0">
+                <SelectValue placeholder="Select your role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="student">Student</SelectItem>
+                <SelectItem value="tutor">Tutor</SelectItem>
+                <SelectItem value="trainer">Trainer</SelectItem>
+                <SelectItem value="librarian">Librarian</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <p className="text-xs text-muted-foreground">

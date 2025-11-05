@@ -23,7 +23,7 @@ const Login = () => {
     try {
       await signIn(email, password);
       toast.success("Logged in successfully!");
-      navigate("/dashboard");
+      navigate("/role-redirect");
     } catch (error: any) {
       toast.error(error.message || "Failed to log in");
     } finally {
