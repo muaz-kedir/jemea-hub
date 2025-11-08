@@ -20,9 +20,11 @@ service cloud.firestore {
     
     // User roles collection - READ for authenticated users, WRITE only for super_admin
     // This allows super_admin to assign roles through the app
+    // TEMPORARY: Allow authenticated users to create their own role during initial setup
     match /user_roles/{userId} {
       allow read: if request.auth != null;
-      allow create, update: if isSuperAdmin(); // Only super_admin can assign roles
+      allow create: if request.auth != null && request.auth.uid == userId; // Allow self-creation during setup
+      allow update: if isSuperAdmin(); // Only super_admin can update roles
       allow delete: if false; // Prevent role deletion
     }
     
