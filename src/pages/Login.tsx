@@ -28,8 +28,9 @@ const Login = () => {
     setLoading(true);
     
     try {
-      await signIn(email, password);
+      const userCredential = await signIn(email, password);
       toast.success("Logged in successfully!");
+      // Will be redirected by useEffect based on role
       navigate("/home");
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to log in";

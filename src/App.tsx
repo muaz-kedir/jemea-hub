@@ -19,6 +19,9 @@ import LibraryDashboard from "./pages/LibraryDashboard";
 import TutorDashboard from "./pages/TutorDashboard";
 import TrainerDashboard from "./pages/TrainerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import LibraryAdminDashboard from "./pages/LibraryAdminDashboard";
+import TutorialAdminDashboard from "./pages/TutorialAdminDashboard";
+import TrainingAdminDashboard from "./pages/TrainingAdminDashboard";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 
@@ -53,6 +56,12 @@ const App = () => (
             <Route path="/tutor-dashboard" element={<ProtectedRoute allowedRoles={["tutor", "super_admin"]}><TutorDashboard /></ProtectedRoute>} />
             <Route path="/trainer-dashboard" element={<ProtectedRoute allowedRoles={["trainer", "super_admin"]}><TrainerDashboard /></ProtectedRoute>} />
             <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={["super_admin"]}><AdminDashboard /></ProtectedRoute>} />
+            
+            {/* Super Admin Sub-Dashboards */}
+            <Route path="/admin/library" element={<ProtectedRoute allowedRoles={["super_admin"]}><LibraryAdminDashboard /></ProtectedRoute>} />
+            <Route path="/admin/tutorial" element={<ProtectedRoute allowedRoles={["super_admin"]}><TutorialAdminDashboard /></ProtectedRoute>} />
+            <Route path="/admin/training" element={<ProtectedRoute allowedRoles={["super_admin"]}><TrainingAdminDashboard /></ProtectedRoute>} />
+            
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

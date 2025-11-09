@@ -14,12 +14,19 @@ import {
   UserCheck,
   Settings,
   BarChart3,
-  Clock
+  Clock,
+  Bell,
+  ArrowRight,
+  Calendar,
+  FileText
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 
 const AdminDashboard = () => {
   const { userProfile, getAllUsers } = useAuth();
@@ -29,6 +36,12 @@ const AdminDashboard = () => {
     tutors: 0,
     trainers: 0,
     students: 0,
+  });
+
+  const [sectorStats, setSectorStats] = useState({
+    library: { total: 0, recent: null as any },
+    tutorials: { total: 0, next: null as any },
+    trainings: { total: 0, upcoming: null as any },
   });
 
   useEffect(() => {
@@ -49,38 +62,78 @@ const AdminDashboard = () => {
     loadStats();
   }, [getAllUsers]);
 
-  const dashboards = [
+  useEffect(() => {
+    const loadSectorStats = async () => {
+      try {
+        // Fetch library resources
+        const librarySnapshot = await getDocs(collection(db, "library_resources"));
+        const libraryDocs = librarySnapshot.docs;
+        
+        // Fetch tutorial sessions
+        const tutorialsSnapshot = await getDocs(collection(db, "tutorial_sessions"));
+        const tutorialDocs = tutorialsSnapshot.docs;
+        
+        // Fetch trainings
+        const trainingsSnapshot = await getDocs(collection(db, "trainings"));
+        const trainingDocs = trainingsSnapshot.docs;
+
+        setSectorStats({
+          library: {
+            total: libraryDocs.length,
+            recent: libraryDocs.length > 0 ? libraryDocs[0].data() : null,
+          },
+          tutorials: {
+            total: tutorialDocs.length,
+            next: tutorialDocs.length > 0 ? tutorialDocs[0].data() : null,
+          },
+          trainings: {
+            total: trainingDocs.length,
+            upcoming: trainingDocs.length > 0 ? trainingDocs[0].data() : null,
+          },
+        });
+      } catch (error) {
+        console.error("Error loading sector stats:", error);
+      }
+    };
+    loadSectorStats();
+  }, []);
+
+  const sectorDashboards = [
     { 
-      title: "Library Management", 
+      title: "Library Dashboard", 
       icon: Library, 
-      path: "/library-dashboard", 
+      path: "/admin/library", 
       color: "bg-blue-500",
       description: "Manage books and resources",
-      count: stats.librarians
+      stats: {
+        total: sectorStats.library.total,
+        label: "Total Resources",
+        recent: sectorStats.library.recent?.title || "No recent uploads"
+      }
     },
     { 
-      title: "Tutoring System", 
+      title: "Tutorial Dashboard", 
       icon: GraduationCap, 
-      path: "/tutor-dashboard", 
+      path: "/admin/tutorial", 
       color: "bg-green-500",
       description: "Oversee tutoring sessions",
-      count: stats.tutors
+      stats: {
+        total: sectorStats.tutorials.total,
+        label: "Total Sessions",
+        recent: sectorStats.tutorials.next?.title || "No upcoming sessions"
+      }
     },
     { 
-      title: "Training Programs", 
+      title: "Training Dashboard", 
       icon: Award, 
-      path: "/trainer-dashboard", 
+      path: "/admin/training", 
       color: "bg-purple-500",
-      description: "Monitor training activities",
-      count: stats.trainers
-    },
-    { 
-      title: "Student Portal", 
-      icon: Users, 
-      path: "/dashboard", 
-      color: "bg-orange-500",
-      description: "View student dashboard",
-      count: stats.students
+      description: "Monitor training programs",
+      stats: {
+        total: sectorStats.trainings.total,
+        label: "Active Programs",
+        recent: sectorStats.trainings.upcoming?.title || "No upcoming trainings"
+      }
     },
   ];
 
@@ -236,29 +289,41 @@ const AdminDashboard = () => {
           
           {/* Dashboards Tab */}
           <TabsContent value="dashboards" className="space-y-4">
+            <div className="mb-4">
+              <h2 className="text-xl font-bold mb-2">Sector Dashboards</h2>
+              <p className="text-sm text-muted-foreground">Access and manage all sub-sector dashboards from one place</p>
+            </div>
             <div className="grid grid-cols-1 gap-4">
-              {dashboards.map((dashboard) => {
+              {sectorDashboards.map((dashboard) => {
                 const Icon = dashboard.icon;
                 return (
-                  <Link
-                    key={dashboard.path}
-                    to={dashboard.path}
-                    className="bg-secondary rounded-2xl p-5 hover:bg-secondary/80 transition-all shadow-md hover:shadow-lg"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`w-14 h-14 ${dashboard.color} rounded-xl flex items-center justify-center shadow-lg`}>
-                        <Icon className="w-7 h-7 text-white" />
+                  <Card key={dashboard.path} className="p-6 border-0 shadow-md hover:shadow-lg transition-all">
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className={`w-16 h-16 ${dashboard.color} rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0`}>
+                        <Icon className="w-8 h-8 text-white" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-bold text-lg">{dashboard.title}</h3>
-                        <p className="text-sm text-muted-foreground">{dashboard.description}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold">{dashboard.count}</p>
-                        <p className="text-xs text-muted-foreground">Active</p>
+                        <h3 className="font-bold text-xl mb-1">{dashboard.title}</h3>
+                        <p className="text-sm text-muted-foreground mb-3">{dashboard.description}</p>
+                        <div className="flex items-center gap-4 text-sm">
+                          <div>
+                            <p className="text-2xl font-bold text-primary">{dashboard.stats.total}</p>
+                            <p className="text-xs text-muted-foreground">{dashboard.stats.label}</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </Link>
+                    <div className="mb-4 p-3 bg-secondary rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-1">Recent Activity</p>
+                      <p className="text-sm font-medium truncate">{dashboard.stats.recent}</p>
+                    </div>
+                    <Link to={dashboard.path}>
+                      <Button className="w-full" size="lg">
+                        Go to Dashboard
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </Link>
+                  </Card>
                 );
               })}
             </div>
