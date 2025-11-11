@@ -28,6 +28,31 @@ service cloud.firestore {
       allow delete: if false; // Prevent role deletion
     }
     
+    // Helper function to check if user has specific role
+    function hasRole(role) {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role == role;
+    }
+    
+    // Training programs collection
+    match /trainings/{trainingId} {
+      allow read: if request.auth != null; // All authenticated users can read
+      allow create, update, delete: if request.auth != null; // TEMPORARY: Allow all authenticated users
+    }
+    
+    // Tutorial sessions collection
+    match /tutorial_sessions/{sessionId} {
+      allow read: if request.auth != null; // All authenticated users can read
+      allow create, update, delete: if request.auth != null; // TEMPORARY: Allow all authenticated users
+    }
+    
+    // Library resources collection
+    match /library_resources/{resourceId} {
+      allow read: if request.auth != null; // All authenticated users can read
+      allow create, update, delete: if request.auth != null; // TEMPORARY: Allow all authenticated users
+    }
+    
     // Default deny all other collections until specific rules are added
     match /{document=**} {
       allow read, write: if false;

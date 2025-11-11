@@ -42,6 +42,7 @@ interface LibraryResource {
   publishedYear?: number;
   copies: number;
   available: number;
+  imageUrl?: string;
   addedAt: any;
 }
 
@@ -61,6 +62,9 @@ const LibraryAdminDashboard = () => {
     copies: "1",
     available: "1",
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     loadResources();
@@ -84,10 +88,61 @@ const LibraryAdminDashboard = () => {
     }
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImage = async (file: File): Promise<string> => {
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await fetch(`${API_URL}/api/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Upload failed');
+    }
+
+    const data = await response.json();
+    return data.data.url;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setUploading(true);
+    
+    // Check authentication
+    const { auth } = await import("@/lib/firebase");
+    const currentUser = auth.currentUser;
+    console.log("Current user:", currentUser);
+    
+    if (!currentUser) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to add resources",
+        variant: "destructive",
+      });
+      setUploading(false);
+      return;
+    }
+    
     try {
-      const resourceData = {
+      let imageUrl = editingResource?.imageUrl || "";
+      
+      const resourceData: any = {
         title: formData.title,
         author: formData.author,
         category: formData.category,
@@ -99,14 +154,26 @@ const LibraryAdminDashboard = () => {
         addedAt: Timestamp.now(),
       };
 
+      // Upload image first if selected
+      if (imageFile) {
+        console.log("Starting image upload...");
+        imageUrl = await uploadImage(imageFile);
+        console.log("Image uploaded successfully! URL:", imageUrl);
+        resourceData.imageUrl = imageUrl;
+      }
+
+      console.log("Saving to Firestore with data:", resourceData);
+
       if (editingResource) {
         await updateDoc(doc(db, "library_resources", editingResource.id), resourceData);
+        console.log("Resource updated in Firestore");
         toast({
           title: "Success",
           description: "Resource updated successfully",
         });
       } else {
-        await addDoc(collection(db, "library_resources"), resourceData);
+        const docRef = await addDoc(collection(db, "library_resources"), resourceData);
+        console.log("Resource added to Firestore with ID:", docRef.id);
         toast({
           title: "Success",
           description: "Resource added successfully",
@@ -115,13 +182,16 @@ const LibraryAdminDashboard = () => {
 
       resetForm();
       loadResources();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving resource:", error);
+      const errorMessage = error?.message || error?.code || "Failed to save resource";
       toast({
         title: "Error",
-        description: "Failed to save resource",
+        description: errorMessage,
         variant: "destructive",
       });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -157,6 +227,8 @@ const LibraryAdminDashboard = () => {
       copies: resource.copies.toString(),
       available: resource.available.toString(),
     });
+    setImagePreview(resource.imageUrl || null);
+    setImageFile(null);
     setIsAddingResource(true);
   };
 
@@ -171,6 +243,8 @@ const LibraryAdminDashboard = () => {
       copies: "1",
       available: "1",
     });
+    setImageFile(null);
+    setImagePreview(null);
     setIsAddingResource(false);
     setEditingResource(null);
   };
@@ -358,11 +432,31 @@ const LibraryAdminDashboard = () => {
                 </div>
               </div>
 
+              <div>
+                <Label htmlFor="image">Cover Image</Label>
+                <Input
+                  id="image"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="cursor-pointer"
+                />
+                {imagePreview && (
+                  <div className="mt-2">
+                    <img 
+                      src={imagePreview} 
+                      alt="Preview" 
+                      className="w-32 h-40 object-cover rounded-lg border"
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-2">
-                <Button type="submit" className="flex-1">
-                  {editingResource ? "Update Resource" : "Add Resource"}
+                <Button type="submit" className="flex-1" disabled={uploading}>
+                  {uploading ? "Uploading..." : (editingResource ? "Update Resource" : "Add Resource")}
                 </Button>
-                <Button type="button" variant="outline" onClick={resetForm}>
+                <Button type="button" variant="outline" onClick={resetForm} disabled={uploading}>
                   Cancel
                 </Button>
               </div>
@@ -386,7 +480,14 @@ const LibraryAdminDashboard = () => {
           <h2 className="text-lg font-bold">Library Resources ({filteredResources.length})</h2>
           {filteredResources.map((resource) => (
             <Card key={resource.id} className="p-4 border-0 shadow-md">
-              <div className="flex items-start justify-between mb-3">
+              <div className="flex items-start gap-4 mb-3">
+                {resource.imageUrl && (
+                  <img 
+                    src={resource.imageUrl} 
+                    alt={resource.title}
+                    className="w-20 h-28 object-cover rounded-lg flex-shrink-0"
+                  />
+                )}
                 <div className="flex-1">
                   <h3 className="font-bold text-lg mb-1">{resource.title}</h3>
                   <p className="text-sm text-muted-foreground mb-2">by {resource.author}</p>

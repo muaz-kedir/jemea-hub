@@ -46,6 +46,7 @@ interface Training {
   location: string;
   level: "beginner" | "intermediate" | "advanced";
   status: "upcoming" | "active" | "completed" | "cancelled";
+  imageUrl?: string;
   createdAt: any;
 }
 
@@ -82,6 +83,9 @@ const TrainingAdminDashboard = () => {
     level: "beginner",
     status: "upcoming",
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     loadTrainings();
@@ -105,10 +109,45 @@ const TrainingAdminDashboard = () => {
     }
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImage = async (file: File): Promise<string> => {
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await fetch(`${API_URL}/api/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Upload failed');
+    }
+
+    const data = await response.json();
+    return data.data.url;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setUploading(true);
     try {
-      const trainingData = {
+      let imageUrl = editingTraining?.imageUrl || "";
+      
+      const trainingData: any = {
         title: formData.title,
         trainer: formData.trainer,
         category: formData.category,
@@ -123,6 +162,12 @@ const TrainingAdminDashboard = () => {
         status: formData.status,
         createdAt: Timestamp.now(),
       };
+
+      // Upload image first if selected
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile);
+        trainingData.imageUrl = imageUrl;
+      }
 
       if (editingTraining) {
         await updateDoc(doc(db, "trainings", editingTraining.id), trainingData);
@@ -147,6 +192,8 @@ const TrainingAdminDashboard = () => {
         description: "Failed to save training program",
         variant: "destructive",
       });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -186,6 +233,8 @@ const TrainingAdminDashboard = () => {
       level: training.level,
       status: training.status,
     });
+    setImagePreview(training.imageUrl || null);
+    setImageFile(null);
     setIsAddingTraining(true);
   };
 
@@ -204,6 +253,8 @@ const TrainingAdminDashboard = () => {
       level: "beginner",
       status: "upcoming",
     });
+    setImageFile(null);
+    setImagePreview(null);
     setIsAddingTraining(false);
     setEditingTraining(null);
   };
@@ -475,11 +526,31 @@ const TrainingAdminDashboard = () => {
                 </div>
               </div>
 
+              <div>
+                <Label htmlFor="image">Training Image</Label>
+                <Input
+                  id="image"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="cursor-pointer"
+                />
+                {imagePreview && (
+                  <div className="mt-2">
+                    <img 
+                      src={imagePreview} 
+                      alt="Preview" 
+                      className="w-full h-48 object-cover rounded-lg border"
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-2">
-                <Button type="submit" className="flex-1">
-                  {editingTraining ? "Update Training" : "Create Training"}
+                <Button type="submit" className="flex-1" disabled={uploading}>
+                  {uploading ? "Uploading..." : (editingTraining ? "Update Training" : "Create Training")}
                 </Button>
-                <Button type="button" variant="outline" onClick={resetForm}>
+                <Button type="button" variant="outline" onClick={resetForm} disabled={uploading}>
                   Cancel
                 </Button>
               </div>
@@ -503,6 +574,13 @@ const TrainingAdminDashboard = () => {
           <h2 className="text-lg font-bold">Training Programs ({filteredTrainings.length})</h2>
           {filteredTrainings.map((training) => (
             <Card key={training.id} className="p-4 border-0 shadow-md">
+              {training.imageUrl && (
+                <img 
+                  src={training.imageUrl} 
+                  alt={training.title}
+                  className="w-full h-48 object-cover rounded-lg mb-4"
+                />
+              )}
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2 flex-wrap">

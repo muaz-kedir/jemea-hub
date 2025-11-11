@@ -16,93 +16,177 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { HumsjLogo } from "@/components/HumsjLogo";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
+import gsap from "gsap";
 
 const LandingPage = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [upcomingTrainings, setUpcomingTrainings] = useState<any[]>([]);
+  const [activeTutorials, setActiveTutorials] = useState<any[]>([]);
+  const [latestLibraryUploads, setLatestLibraryUploads] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Refs for GSAP animations
+  const heroRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const subtitleRef = useRef<HTMLParagraphElement>(null);
+  const buttonsRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
 
-  // Dynamic content data
-  const upcomingTrainings = [
-    {
-      id: 1,
-      title: "Advanced Web Development",
-      date: "Nov 15, 2025",
-      instructor: "Dr. Ahmed Hassan",
-      participants: 25,
-      image: "🎓"
-    },
-    {
-      id: 2,
-      title: "Data Science Fundamentals",
-      date: "Nov 20, 2025",
-      instructor: "Prof. Sarah Ali",
-      participants: 30,
-      image: "📊"
-    },
-    {
-      id: 3,
-      title: "Mobile App Development",
-      date: "Nov 25, 2025",
-      instructor: "Eng. Omar Khalid",
-      participants: 20,
-      image: "📱"
-    }
-  ];
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  const activeTutorials = [
-    {
-      id: 1,
-      title: "Mathematics Tutoring",
-      tutor: "Dr. Fatima Ibrahim",
-      students: 15,
-      time: "Mon, Wed, Fri - 2:00 PM",
-      subject: "Calculus & Algebra"
-    },
-    {
-      id: 2,
-      title: "English Language",
-      tutor: "Ms. Aisha Mohammed",
-      students: 20,
-      time: "Tue, Thu - 3:00 PM",
-      subject: "Grammar & Writing"
-    },
-    {
-      id: 3,
-      title: "Computer Science",
-      tutor: "Eng. Yusuf Ahmed",
-      students: 18,
-      time: "Mon, Wed - 4:00 PM",
-      subject: "Programming Basics"
-    }
-  ];
+  // GSAP Hero Animations
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      // Animate background image with zoom effect
+      if (imageRef.current) {
+        gsap.fromTo(
+          imageRef.current,
+          { scale: 1.2, opacity: 0 },
+          { scale: 1, opacity: 1, duration: 2, ease: "power3.out" }
+        );
+      }
 
-  const latestLibraryUploads = [
-    {
-      id: 1,
-      title: "Introduction to Artificial Intelligence",
-      author: "Stuart Russell",
-      category: "Computer Science",
-      uploadDate: "2 days ago",
-      pages: 1152
-    },
-    {
-      id: 2,
-      title: "Islamic Economics Principles",
-      author: "Dr. Muhammad Akram Khan",
-      category: "Economics",
-      uploadDate: "3 days ago",
-      pages: 456
-    },
-    {
-      id: 3,
-      title: "Modern Physics",
-      author: "Raymond A. Serway",
-      category: "Physics",
-      uploadDate: "5 days ago",
-      pages: 1328
+      // Animate title with fade and slide up
+      if (titleRef.current) {
+        gsap.fromTo(
+          titleRef.current,
+          { y: 50, opacity: 0 },
+          { y: 0, opacity: 1, duration: 1, delay: 0.3, ease: "power3.out" }
+        );
+      }
+
+      // Animate subtitle
+      if (subtitleRef.current) {
+        gsap.fromTo(
+          subtitleRef.current,
+          { y: 30, opacity: 0 },
+          { y: 0, opacity: 1, duration: 1, delay: 0.6, ease: "power3.out" }
+        );
+      }
+
+      // Animate buttons
+      if (buttonsRef.current) {
+        gsap.fromTo(
+          buttonsRef.current.children,
+          { y: 20, opacity: 0 },
+          { 
+            y: 0, 
+            opacity: 1, 
+            duration: 0.8, 
+            delay: 0.9, 
+            stagger: 0.2,
+            ease: "power3.out" 
+          }
+        );
+      }
+
+      // Floating animation for decorative elements
+      gsap.to(".glow-orb", {
+        y: "+=20",
+        duration: 3,
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.inOut",
+        stagger: 0.5
+      });
+    }, heroRef);
+
+    return () => ctx.revert();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      // Load trainings
+      const trainingsQuery = query(
+        collection(db, "trainings"),
+        orderBy("createdAt", "desc"),
+        limit(3)
+      );
+      const trainingsSnapshot = await getDocs(trainingsQuery);
+      const trainingsData = trainingsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setUpcomingTrainings(trainingsData);
+
+      // Load tutorial sessions
+      const tutorialsQuery = query(
+        collection(db, "tutorial_sessions"),
+        orderBy("createdAt", "desc"),
+        limit(3)
+      );
+      const tutorialsSnapshot = await getDocs(tutorialsQuery);
+      const tutorialsData = tutorialsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setActiveTutorials(tutorialsData);
+
+      // Load library resources
+      const libraryQuery = query(
+        collection(db, "library_resources"),
+        orderBy("addedAt", "desc"),
+        limit(3)
+      );
+      const librarySnapshot = await getDocs(libraryQuery);
+      const libraryData = librarySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log("Library resources loaded:", libraryData);
+      libraryData.forEach(item => {
+        console.log(`Resource: ${item.title}, imageUrl: ${item.imageUrl}`);
+      });
+      setLatestLibraryUploads(libraryData);
+    } catch (error) {
+      console.error("Error loading data:", error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const getTrainingEmoji = (category: string) => {
+    const lowerCategory = category?.toLowerCase() || "";
+    if (lowerCategory.includes("web") || lowerCategory.includes("technology")) return "🎓";
+    if (lowerCategory.includes("data") || lowerCategory.includes("science")) return "📊";
+    if (lowerCategory.includes("mobile") || lowerCategory.includes("app")) return "📱";
+    if (lowerCategory.includes("leadership")) return "👔";
+    return "📚";
+  };
+
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return "TBA";
+    try {
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    } catch {
+      return "TBA";
+    }
+  };
+
+  const getTimeAgo = (timestamp: any) => {
+    if (!timestamp) return "Recently";
+    try {
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - date.getTime());
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) return "Today";
+      if (diffDays === 1) return "Yesterday";
+      if (diffDays < 7) return `${diffDays} days ago`;
+      if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+      return `${Math.floor(diffDays / 30)} months ago`;
+    } catch {
+      return "Recently";
+    }
+  };
 
   const dailyQuote = {
     text: "Seek knowledge from the cradle to the grave.",
@@ -222,29 +306,48 @@ const LandingPage = () => {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-white py-20 overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-10 left-10 w-72 h-72 bg-white rounded-full blur-3xl"></div>
-          <div className="absolute bottom-10 right-10 w-96 h-96 bg-white rounded-full blur-3xl"></div>
+      <section ref={heroRef} className="relative text-white py-32 overflow-hidden min-h-[600px] flex items-center">
+        {/* Background Image with Overlay */}
+        <div className="absolute inset-0">
+          <img 
+            ref={imageRef}
+            src="/mosque-hero.jpg" 
+            alt="Mosque at night"
+            className="w-full h-full object-cover brightness-90"
+            onError={(e) => {
+              // Hide image and show gradient background if image fails to load
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+          {/* Fallback gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black"></div>
+          {/* Lighter overlay for better image visibility while keeping text readable */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/40"></div>
         </div>
         
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Decorative elements */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="glow-orb absolute top-10 left-10 w-72 h-72 bg-amber-500 rounded-full blur-3xl"></div>
+          <div className="glow-orb absolute bottom-10 right-10 w-96 h-96 bg-green-500 rounded-full blur-3xl"></div>
+        </div>
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
           <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 animate-fade-in">
+            <h1 ref={titleRef} className="text-4xl md:text-6xl font-bold mb-6 drop-shadow-2xl">
               Haramaya University Muslim Students Jema'a
             </h1>
-            <p className="text-xl md:text-2xl mb-8 text-white/90">
+            <p ref={subtitleRef} className="text-xl md:text-2xl mb-8 text-white/95 drop-shadow-lg">
               Academic Excellence Through Faith and Knowledge
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div ref={buttonsRef} className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/signup">
-                <Button size="lg" className="bg-white text-primary hover:bg-white/90 rounded-full px-8">
+                <Button size="lg" className="bg-white text-gray-900 hover:bg-white/90 hover:scale-105 transition-transform rounded-full px-8 shadow-xl">
                   Get Started
                   <ChevronRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
               <a href="#sectors">
-                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 rounded-full px-8">
+                <Button size="lg" variant="outline" className="border-white/80 text-white hover:bg-white/20 hover:scale-105 transition-transform backdrop-blur-sm rounded-full px-8 shadow-xl">
                   Explore Sectors
                 </Button>
               </a>
@@ -288,31 +391,55 @@ const LandingPage = () => {
               </div>
               <Award className="w-8 h-8 text-purple-500" />
             </div>
-            <div className="grid md:grid-cols-3 gap-6">
-              {upcomingTrainings.map((training) => (
-                <Card key={training.id} className="p-6 hover:shadow-lg transition-shadow border-0 shadow-md">
-                  <div className="text-5xl mb-4">{training.image}</div>
-                  <h3 className="text-xl font-bold mb-2">{training.title}</h3>
-                  <div className="space-y-2 text-sm text-muted-foreground mb-4">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      <span>{training.date}</span>
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Loading trainings...</p>
+              </div>
+            ) : upcomingTrainings.length === 0 ? (
+              <Card className="p-8 text-center border-0 shadow-md">
+                <Award className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-muted-foreground">No training programs available yet</p>
+              </Card>
+            ) : (
+              <div className="grid md:grid-cols-3 gap-6">
+                {upcomingTrainings.map((training) => (
+                  <Card key={training.id} className="p-6 hover:shadow-lg transition-shadow border-0 shadow-md">
+                    {training.imageUrl ? (
+                      <img 
+                        src={training.imageUrl} 
+                        alt={training.title}
+                        className="w-full h-48 object-cover rounded-lg mb-4"
+                        onError={(e) => {
+                          console.error("Failed to load training image:", training.imageUrl);
+                          e.currentTarget.style.display = 'none';
+                        }}
+                        onLoad={() => console.log("Training image loaded:", training.imageUrl)}
+                      />
+                    ) : (
+                      <div className="text-5xl mb-4">{getTrainingEmoji(training.category)}</div>
+                    )}
+                    <h3 className="text-xl font-bold mb-2">{training.title}</h3>
+                    <div className="space-y-2 text-sm text-muted-foreground mb-4">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        <span>{formatDate(training.startDate)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <GraduationCap className="w-4 h-4" />
+                        <span>{training.trainer}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        <span>{training.enrolledParticipants || 0} participants</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <GraduationCap className="w-4 h-4" />
-                      <span>{training.instructor}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      <span>{training.participants} participants</span>
-                    </div>
-                  </div>
-                  <Button className="w-full rounded-full" size="sm">
-                    Register Now
-                  </Button>
-                </Card>
-              ))}
-            </div>
+                    <Button className="w-full rounded-full" size="sm">
+                      Register Now
+                    </Button>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Active Tutorials */}
@@ -324,38 +451,61 @@ const LandingPage = () => {
               </div>
               <GraduationCap className="w-8 h-8 text-green-500" />
             </div>
-            <div className="grid md:grid-cols-3 gap-6">
-              {activeTutorials.map((tutorial) => (
-                <Card key={tutorial.id} className="p-6 hover:shadow-lg transition-shadow border-0 shadow-md">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
-                      <GraduationCap className="w-6 h-6 text-white" />
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Loading tutorials...</p>
+              </div>
+            ) : activeTutorials.length === 0 ? (
+              <Card className="p-8 text-center border-0 shadow-md">
+                <GraduationCap className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-muted-foreground">No tutorial sessions available yet</p>
+              </Card>
+            ) : (
+              <div className="grid md:grid-cols-3 gap-6">
+                {activeTutorials.map((tutorial) => (
+                  <Card key={tutorial.id} className="p-6 hover:shadow-lg transition-shadow border-0 shadow-md">
+                    {tutorial.imageUrl && (
+                      <img 
+                        src={tutorial.imageUrl} 
+                        alt={tutorial.title}
+                        className="w-full h-48 object-cover rounded-lg mb-4"
+                        onError={(e) => {
+                          console.error("Failed to load tutorial image:", tutorial.imageUrl);
+                          e.currentTarget.style.display = 'none';
+                        }}
+                        onLoad={() => console.log("Tutorial image loaded:", tutorial.imageUrl)}
+                      />
+                    )}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+                        <GraduationCap className="w-6 h-6 text-white" />
+                      </div>
+                      <span className="text-xs bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
+                        {tutorial.status || "Active"}
+                      </span>
                     </div>
-                    <span className="text-xs bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
-                      Active
-                    </span>
-                  </div>
-                  <h3 className="text-xl font-bold mb-2">{tutorial.title}</h3>
-                  <p className="text-sm text-muted-foreground mb-3">{tutorial.subject}</p>
-                  <div className="space-y-2 text-sm mb-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Tutor:</span>
-                      <span className="font-medium">{tutorial.tutor}</span>
+                    <h3 className="text-xl font-bold mb-2">{tutorial.title}</h3>
+                    <p className="text-sm text-muted-foreground mb-3">{tutorial.subject}</p>
+                    <div className="space-y-2 text-sm mb-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Tutor:</span>
+                        <span className="font-medium">{tutorial.tutor}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Students:</span>
+                        <span className="font-medium">{tutorial.enrolledStudents || 0}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-2">
+                        {tutorial.location || "TBA"}
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Students:</span>
-                      <span className="font-medium">{tutorial.students}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-2">
-                      {tutorial.time}
-                    </div>
-                  </div>
-                  <Button variant="outline" className="w-full rounded-full" size="sm">
-                    Join Session
-                  </Button>
-                </Card>
-              ))}
-            </div>
+                    <Button variant="outline" className="w-full rounded-full" size="sm">
+                      Join Session
+                    </Button>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Latest Library Uploads */}
@@ -367,37 +517,61 @@ const LandingPage = () => {
               </div>
               <BookOpen className="w-8 h-8 text-blue-500" />
             </div>
-            <div className="grid md:grid-cols-3 gap-6">
-              {latestLibraryUploads.map((book) => (
-                <Card key={book.id} className="p-6 hover:shadow-lg transition-shadow border-0 shadow-md">
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="w-16 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <BookOpen className="w-8 h-8 text-white" />
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Loading library resources...</p>
+              </div>
+            ) : latestLibraryUploads.length === 0 ? (
+              <Card className="p-8 text-center border-0 shadow-md">
+                <BookOpen className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-muted-foreground">No library resources available yet</p>
+              </Card>
+            ) : (
+              <div className="grid md:grid-cols-3 gap-6">
+                {latestLibraryUploads.map((book) => (
+                  <Card key={book.id} className="p-6 hover:shadow-lg transition-shadow border-0 shadow-md">
+                    <div className="flex items-start gap-4 mb-4">
+                      {book.imageUrl ? (
+                        <img 
+                          src={book.imageUrl} 
+                          alt={book.title}
+                          className="w-16 h-24 object-cover rounded-lg flex-shrink-0"
+                          onError={(e) => {
+                            console.error("Failed to load image:", book.imageUrl);
+                            e.currentTarget.style.display = 'none';
+                          }}
+                          onLoad={() => console.log("Image loaded successfully:", book.imageUrl)}
+                        />
+                      ) : (
+                        <div className="w-16 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <BookOpen className="w-8 h-8 text-white" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold mb-1 line-clamp-2">{book.title}</h3>
+                        <p className="text-sm text-muted-foreground">{book.author}</p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold mb-1 line-clamp-2">{book.title}</h3>
-                      <p className="text-sm text-muted-foreground">{book.author}</p>
+                    <div className="space-y-2 text-sm mb-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Category:</span>
+                        <span className="font-medium">{book.category}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Copies:</span>
+                        <span className="font-medium">{book.available || 0}/{book.copies || 0}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Added {getTimeAgo(book.addedAt)}
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-2 text-sm mb-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Category:</span>
-                      <span className="font-medium">{book.category}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Pages:</span>
-                      <span className="font-medium">{book.pages}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Uploaded {book.uploadDate}
-                    </div>
-                  </div>
-                  <Button variant="outline" className="w-full rounded-full" size="sm">
-                    View Details
-                  </Button>
-                </Card>
-              ))}
-            </div>
+                    <Button variant="outline" className="w-full rounded-full" size="sm">
+                      View Details
+                    </Button>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>

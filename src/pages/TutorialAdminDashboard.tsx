@@ -44,6 +44,7 @@ interface TutorialSession {
   enrolledStudents: number;
   location: string;
   status: "upcoming" | "ongoing" | "completed" | "cancelled";
+  imageUrl?: string;
   createdAt: any;
 }
 
@@ -76,6 +77,9 @@ const TutorialAdminDashboard = () => {
     location: "",
     status: "upcoming",
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     loadSessions();
@@ -99,10 +103,45 @@ const TutorialAdminDashboard = () => {
     }
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImage = async (file: File): Promise<string> => {
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await fetch(`${API_URL}/api/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Upload failed');
+    }
+
+    const data = await response.json();
+    return data.data.url;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setUploading(true);
     try {
-      const sessionData = {
+      let imageUrl = editingSession?.imageUrl || "";
+      
+      const sessionData: any = {
         title: formData.title,
         tutor: formData.tutor,
         subject: formData.subject,
@@ -115,6 +154,12 @@ const TutorialAdminDashboard = () => {
         status: formData.status,
         createdAt: Timestamp.now(),
       };
+
+      // Upload image first if selected
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile);
+        sessionData.imageUrl = imageUrl;
+      }
 
       if (editingSession) {
         await updateDoc(doc(db, "tutorial_sessions", editingSession.id), sessionData);
@@ -139,6 +184,8 @@ const TutorialAdminDashboard = () => {
         description: "Failed to save session",
         variant: "destructive",
       });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -176,6 +223,8 @@ const TutorialAdminDashboard = () => {
       location: session.location,
       status: session.status,
     });
+    setImagePreview(session.imageUrl || null);
+    setImageFile(null);
     setIsAddingSession(true);
   };
 
@@ -192,6 +241,8 @@ const TutorialAdminDashboard = () => {
       location: "",
       status: "upcoming",
     });
+    setImageFile(null);
+    setImagePreview(null);
     setIsAddingSession(false);
     setEditingSession(null);
   };
@@ -425,11 +476,31 @@ const TutorialAdminDashboard = () => {
                 </select>
               </div>
 
+              <div>
+                <Label htmlFor="image">Session Image</Label>
+                <Input
+                  id="image"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="cursor-pointer"
+                />
+                {imagePreview && (
+                  <div className="mt-2">
+                    <img 
+                      src={imagePreview} 
+                      alt="Preview" 
+                      className="w-full h-48 object-cover rounded-lg border"
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-2">
-                <Button type="submit" className="flex-1">
-                  {editingSession ? "Update Session" : "Create Session"}
+                <Button type="submit" className="flex-1" disabled={uploading}>
+                  {uploading ? "Uploading..." : (editingSession ? "Update Session" : "Create Session")}
                 </Button>
-                <Button type="button" variant="outline" onClick={resetForm}>
+                <Button type="button" variant="outline" onClick={resetForm} disabled={uploading}>
                   Cancel
                 </Button>
               </div>
@@ -453,6 +524,13 @@ const TutorialAdminDashboard = () => {
           <h2 className="text-lg font-bold">Tutorial Sessions ({filteredSessions.length})</h2>
           {filteredSessions.map((session) => (
             <Card key={session.id} className="p-4 border-0 shadow-md">
+              {session.imageUrl && (
+                <img 
+                  src={session.imageUrl} 
+                  alt={session.title}
+                  className="w-full h-48 object-cover rounded-lg mb-4"
+                />
+              )}
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">

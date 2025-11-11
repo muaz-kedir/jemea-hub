@@ -1,0 +1,39 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user has specific role
+    function hasRole(role) {
+      return request.auth != null && 
+             firestore.get(/databases/(default)/documents/user_roles/$(request.auth.uid)).data.role == role;
+    }
+    
+    // Helper function to check if user is super_admin
+    function isSuperAdmin() {
+      return hasRole('super_admin');
+    }
+    
+    // Training images - Super admin and trainers can upload
+    match /trainings/{trainingId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin() || hasRole('trainer');
+    }
+    
+    // Tutorial session images - Super admin and tutors can upload
+    match /tutorial_sessions/{sessionId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin() || hasRole('tutor');
+    }
+    
+    // Library resource images - Super admin and librarians can upload
+    match /library_resources/{resourceId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin() || hasRole('librarian');
+    }
+  }
+}
