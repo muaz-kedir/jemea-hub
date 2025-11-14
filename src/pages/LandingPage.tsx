@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { 
   GraduationCap, 
   BookOpen, 
@@ -16,18 +16,30 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useState, useEffect, useRef } from "react";
 import { HumsjLogo } from "@/components/HumsjLogo";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, limit, DocumentData } from "firebase/firestore";
 import gsap from "gsap";
+
+type FirestoreRecord = DocumentData & { id: string };
 
 const LandingPage = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [upcomingTrainings, setUpcomingTrainings] = useState<any[]>([]);
-  const [activeTutorials, setActiveTutorials] = useState<any[]>([]);
-  const [latestLibraryUploads, setLatestLibraryUploads] = useState<any[]>([]);
+  const [upcomingTrainings, setUpcomingTrainings] = useState<FirestoreRecord[]>([]);
+  const [activeTutorials, setActiveTutorials] = useState<FirestoreRecord[]>([]);
+  const [latestLibraryUploads, setLatestLibraryUploads] = useState<FirestoreRecord[]>([]);
+  const [selectedLibraryResource, setSelectedLibraryResource] = useState<FirestoreRecord | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   
   // Refs for GSAP animations
   const heroRef = useRef<HTMLDivElement>(null);
@@ -109,9 +121,9 @@ const LandingPage = () => {
         limit(3)
       );
       const trainingsSnapshot = await getDocs(trainingsQuery);
-      const trainingsData = trainingsSnapshot.docs.map(doc => ({
+      const trainingsData = trainingsSnapshot.docs.map((doc): FirestoreRecord => ({
         id: doc.id,
-        ...doc.data()
+        ...(doc.data() as DocumentData),
       }));
       setUpcomingTrainings(trainingsData);
 
@@ -122,9 +134,9 @@ const LandingPage = () => {
         limit(3)
       );
       const tutorialsSnapshot = await getDocs(tutorialsQuery);
-      const tutorialsData = tutorialsSnapshot.docs.map(doc => ({
+      const tutorialsData = tutorialsSnapshot.docs.map((doc): FirestoreRecord => ({
         id: doc.id,
-        ...doc.data()
+        ...(doc.data() as DocumentData),
       }));
       setActiveTutorials(tutorialsData);
 
@@ -135,9 +147,9 @@ const LandingPage = () => {
         limit(3)
       );
       const librarySnapshot = await getDocs(libraryQuery);
-      const libraryData = librarySnapshot.docs.map(doc => ({
+      const libraryData = librarySnapshot.docs.map((doc): FirestoreRecord => ({
         id: doc.id,
-        ...doc.data()
+        ...(doc.data() as DocumentData),
       }));
       console.log("Library resources loaded:", libraryData);
       libraryData.forEach(item => {
@@ -221,7 +233,7 @@ const LandingPage = () => {
       icon: Users,
       description: "Connect with fellow students",
       color: "bg-orange-500",
-      link: "/dashboard"
+      link: "/landing"
     }
   ];
 
@@ -433,7 +445,14 @@ const LandingPage = () => {
                         <span>{training.enrolledParticipants || 0} participants</span>
                       </div>
                     </div>
-                    <Button className="w-full rounded-full" size="sm">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500 mb-3">
+                      Prepare for registration
+                    </p>
+                    <Button
+                      className="w-full rounded-full"
+                      size="sm"
+                      onClick={() => navigate(`/trainings/${training.id}/register`)}
+                    >
                       Register Now
                     </Button>
                   </Card>
@@ -565,7 +584,12 @@ const LandingPage = () => {
                         Added {getTimeAgo(book.addedAt)}
                       </div>
                     </div>
-                    <Button variant="outline" className="w-full rounded-full" size="sm">
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-full"
+                      size="sm"
+                      onClick={() => setSelectedLibraryResource(book)}
+                    >
                       View Details
                     </Button>
                   </Card>
@@ -576,6 +600,96 @@ const LandingPage = () => {
         </div>
       </section>
 
+      <Dialog open={!!selectedLibraryResource} onOpenChange={(open) => !open && setSelectedLibraryResource(null)}>
+        <DialogContent className="max-w-3xl">
+          {selectedLibraryResource && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold">
+                  {selectedLibraryResource.title}
+                </DialogTitle>
+                <DialogDescription>
+                  Added {getTimeAgo(selectedLibraryResource.addedAt)} by {selectedLibraryResource.author}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid md:grid-cols-[280px_1fr] gap-6 py-4">
+                <div className="space-y-3">
+                  {selectedLibraryResource.imageUrl ? (
+                    <img
+                      src={selectedLibraryResource.imageUrl}
+                      alt={selectedLibraryResource.title}
+                      className="w-full h-64 object-cover rounded-xl shadow-md"
+                    />
+                  ) : (
+                    <div className="w-full h-64 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                      <BookOpen className="w-16 h-16 text-white" />
+                    </div>
+                  )}
+                  <div className="rounded-xl border p-4 space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Category</span>
+                      <span className="font-medium">{selectedLibraryResource.category || "N/A"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">ISBN</span>
+                      <span className="font-medium">{selectedLibraryResource.isbn || "N/A"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Published</span>
+                      <span className="font-medium">
+                        {selectedLibraryResource.publishedYear || "Unknown"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Copies</span>
+                      <span className="font-medium">
+                        {selectedLibraryResource.available ?? 0} / {selectedLibraryResource.copies ?? 0}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-lg font-semibold mb-2">Description</h4>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {selectedLibraryResource.description || "No description provided."}
+                    </p>
+                  </div>
+                  {selectedLibraryResource.keywords?.length ? (
+                    <div>
+                      <h4 className="text-lg font-semibold mb-2">Keywords</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedLibraryResource.keywords.map((tag: string) => (
+                          <span
+                            key={tag}
+                            className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="rounded-xl border p-4 bg-muted/50">
+                    <h4 className="font-semibold mb-2">How to Access</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Visit the library desk with the book title and ISBN to request a copy. Availability shown above is updated in real-time.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                <span className="text-sm text-muted-foreground">
+                  Last updated {getTimeAgo(selectedLibraryResource.addedAt)}
+                </span>
+                <Button onClick={() => setSelectedLibraryResource(null)} className="rounded-full">
+                  Close
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
       {/* Sectors Navigation */}
       <section id="sectors" className="py-16 bg-secondary/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -750,7 +864,7 @@ const LandingPage = () => {
                 <li><Link to="/library-dashboard" className="hover:text-white transition-colors">Library</Link></li>
                 <li><Link to="/tutor-dashboard" className="hover:text-white transition-colors">Tutoring</Link></li>
                 <li><Link to="/trainer-dashboard" className="hover:text-white transition-colors">Training</Link></li>
-                <li><Link to="/dashboard" className="hover:text-white transition-colors">Community</Link></li>
+                <li><Link to="/landing" className="hover:text-white transition-colors">Community</Link></li>
               </ul>
             </div>
             

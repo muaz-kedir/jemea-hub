@@ -6,22 +6,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Link, useNavigate } from "react-router-dom";
 import { Chrome, Facebook } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn, user, loading: authLoading } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
-
-  // Redirect if already logged in
-  useEffect(() => {
-    if (!authLoading && user) {
-      navigate("/home", { replace: true });
-    }
-  }, [user, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,8 +25,27 @@ const Login = () => {
     try {
       const userCredential = await signIn(email, password);
       toast.success("Logged in successfully!");
-      // Will be redirected by useEffect based on role
-      navigate("/home");
+
+      const roleDoc = await getDoc(doc(db, "user_roles", userCredential.user.uid));
+      const role = (roleDoc.exists() ? roleDoc.data().role : "student") as string;
+
+      switch (role) {
+        case "librarian":
+          navigate("/library-dashboard", { replace: true });
+          break;
+        case "tutor":
+          navigate("/tutor-dashboard", { replace: true });
+          break;
+        case "trainer":
+          navigate("/trainer-dashboard", { replace: true });
+          break;
+        case "super_admin":
+          navigate("/admin-dashboard", { replace: true });
+          break;
+        default:
+          navigate("/landing", { replace: true });
+          break;
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to log in";
       toast.error(message);

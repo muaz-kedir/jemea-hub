@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import { RoleBasedRedirect } from "./components/RoleBasedRedirect";
 import Splash from "./pages/Splash";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
@@ -13,7 +12,6 @@ import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import Welcome from "./pages/Welcome";
 import RoleSelect from "./pages/RoleSelect";
-import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import LibraryDashboard from "./pages/LibraryDashboard";
 import TutorDashboard from "./pages/TutorDashboard";
@@ -24,6 +22,7 @@ import TutorialAdminDashboard from "./pages/TutorialAdminDashboard";
 import TrainingAdminDashboard from "./pages/TrainingAdminDashboard";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
+import TrainingRegistration from "./pages/TrainingRegistration";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +36,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Splash />} />
             <Route path="/landing" element={<LandingPage />} />
+            <Route path="/trainings/:trainingId/register" element={<TrainingRegistration />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -44,14 +44,6 @@ const App = () => (
             <Route path="/role-select" element={<RoleSelect />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
             
-            {/* Home route - redirects to role-based dashboard */}
-            <Route path="/home" element={<ProtectedRoute><RoleBasedRedirect /></ProtectedRoute>} />
-            
-            {/* Role-based redirect (legacy) */}
-            <Route path="/role-redirect" element={<ProtectedRoute><RoleBasedRedirect /></ProtectedRoute>} />
-            
-            {/* Protected routes */}
-            <Route path="/dashboard" element={<ProtectedRoute allowedRoles={["student"]}><Dashboard /></ProtectedRoute>} />
             <Route path="/library-dashboard" element={<ProtectedRoute allowedRoles={["librarian", "super_admin"]}><LibraryDashboard /></ProtectedRoute>} />
             <Route path="/tutor-dashboard" element={<ProtectedRoute allowedRoles={["tutor", "super_admin"]}><TutorDashboard /></ProtectedRoute>} />
             <Route path="/trainer-dashboard" element={<ProtectedRoute allowedRoles={["trainer", "super_admin"]}><TrainerDashboard /></ProtectedRoute>} />

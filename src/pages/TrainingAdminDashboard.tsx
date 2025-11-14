@@ -3,6 +3,15 @@ import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,6 +59,33 @@ interface Training {
   createdAt: any;
 }
 
+interface TrainingRegistrationRecord {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  studentId?: string;
+  department?: string;
+  batch?: string;
+  motivation?: string | null;
+  registeredAt?: any;
+}
+
+const formatDateTime = (value: any) => {
+  if (!value) return "N/A";
+  try {
+    if (typeof value === "string") {
+      return new Date(value).toLocaleString();
+    }
+    if (value.toDate) {
+      return value.toDate().toLocaleString();
+    }
+  } catch (error) {
+    console.warn("Unable to format date", error);
+  }
+  return String(value);
+};
+
 const TrainingAdminDashboard = () => {
   const { toast } = useToast();
   const [trainings, setTrainings] = useState<Training[]>([]);
@@ -86,6 +122,10 @@ const TrainingAdminDashboard = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [registrationsOpen, setRegistrationsOpen] = useState(false);
+  const [selectedTrainingRegistrations, setSelectedTrainingRegistrations] = useState<Training | null>(null);
+  const [registrations, setRegistrations] = useState<TrainingRegistrationRecord[]>([]);
+  const [registrationsLoading, setRegistrationsLoading] = useState(false);
 
   useEffect(() => {
     loadTrainings();
@@ -264,6 +304,42 @@ const TrainingAdminDashboard = () => {
     training.trainer.toLowerCase().includes(searchQuery.toLowerCase()) ||
     training.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const openRegistrations = async (training: Training) => {
+    setSelectedTrainingRegistrations(training);
+    setRegistrationsOpen(true);
+    setRegistrations([]);
+    setRegistrationsLoading(true);
+    try {
+      const registrationsSnapshot = await getDocs(
+        collection(db, "trainings", training.id, "registrations")
+      );
+      const registrationData = registrationsSnapshot.docs.map((doc): TrainingRegistrationRecord => {
+        const data = doc.data() as Record<string, any>;
+        return {
+          id: doc.id,
+          fullName: data.fullName ?? "",
+          email: data.email ?? "",
+          phone: data.phone ?? "",
+          studentId: data.studentId,
+          department: data.department,
+          batch: data.batch,
+          motivation: data.motivation ?? null,
+          registeredAt: data.registeredAt,
+        };
+      });
+      setRegistrations(registrationData);
+    } catch (error) {
+      console.error("Error loading registrations:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load registered participants",
+        variant: "destructive",
+      });
+    } finally {
+      setRegistrationsLoading(false);
+    }
+  };
 
   const stats = {
     totalTrainings: trainings.length,
@@ -620,6 +696,13 @@ const TrainingAdminDashboard = () => {
                 </div>
                 <div className="flex gap-2">
                   <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openRegistrations(training)}
+                  >
+                    View Registrations
+                  </Button>
+                  <Button
                     size="icon"
                     variant="ghost"
                     onClick={() => handleEdit(training)}
@@ -648,6 +731,64 @@ const TrainingAdminDashboard = () => {
           )}
         </div>
       </div>
+
+      <Dialog open={registrationsOpen} onOpenChange={(open) => {
+        setRegistrationsOpen(open);
+        if (!open) {
+          setSelectedTrainingRegistrations(null);
+          setRegistrations([]);
+        }
+      }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Registered Participants</DialogTitle>
+            <DialogDescription>
+              {selectedTrainingRegistrations ? selectedTrainingRegistrations.title : "Select a training to view registrations"}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-80 pr-4">
+            {registrationsLoading ? (
+              <div className="py-10 text-center text-sm text-muted-foreground">
+                Loading registrations...
+              </div>
+            ) : registrations.length === 0 ? (
+              <div className="py-10 text-center text-sm text-muted-foreground">
+                No participants have registered yet.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {registrations.map((participant) => (
+                  <Card key={participant.id} className="p-4 border-0 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-sm">{participant.fullName}</p>
+                        <p className="text-sm text-muted-foreground">{participant.email}</p>
+                        <p className="text-sm text-muted-foreground">{participant.phone}</p>
+                        <div className="mt-2 grid sm:grid-cols-2 gap-2 text-xs text-muted-foreground">
+                          <span><strong>ID:</strong> {participant.studentId || "N/A"}</span>
+                          <span><strong>Dept:</strong> {participant.department || "N/A"}</span>
+                          <span><strong>Batch:</strong> {participant.batch || "N/A"}</span>
+                        </div>
+                      </div>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {participant.registeredAt ? formatDateTime(participant.registeredAt) : ""}
+                      </span>
+                    </div>
+                    {participant.motivation ? (
+                      <p className="mt-3 text-sm text-muted-foreground">
+                        "{participant.motivation}"
+                      </p>
+                    ) : null}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+          <DialogFooter>
+            <Button onClick={() => setRegistrationsOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>

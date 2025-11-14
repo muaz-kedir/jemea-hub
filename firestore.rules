@@ -39,6 +39,13 @@ service cloud.firestore {
     match /trainings/{trainingId} {
       allow read: if request.auth != null; // All authenticated users can read
       allow create, update, delete: if request.auth != null; // TEMPORARY: Allow all authenticated users
+
+      // Training registrations subcollection
+      match /registrations/{registrationId} {
+        allow create: if request.auth != null; // Any authenticated user can register
+        allow read: if request.auth != null && (isSuperAdmin() || hasRole('trainer'));
+        allow update, delete: if isSuperAdmin();
+      }
     }
     
     // Tutorial sessions collection

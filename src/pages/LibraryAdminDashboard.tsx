@@ -46,6 +46,15 @@ interface LibraryResource {
   addedAt: any;
 }
 
+const sanitizeData = <T extends Record<string, any>>(data: T): T => {
+  const cleanedEntries = Object.entries(data).filter(([_, value]) => {
+    if (value === undefined || value === null) return false;
+    if (typeof value === "number" && Number.isNaN(value)) return false;
+    return true;
+  });
+  return Object.fromEntries(cleanedEntries) as T;
+};
+
 const LibraryAdminDashboard = () => {
   const { toast } = useToast();
   const [resources, setResources] = useState<LibraryResource[]>([]);
@@ -142,17 +151,21 @@ const LibraryAdminDashboard = () => {
     try {
       let imageUrl = editingResource?.imageUrl || "";
       
-      const resourceData: any = {
+      const parsedCopies = parseInt(formData.copies, 10);
+      const parsedAvailable = parseInt(formData.available, 10);
+      const parsedPublishedYear = formData.publishedYear ? parseInt(formData.publishedYear, 10) : undefined;
+
+      const resourceData = sanitizeData({
         title: formData.title,
         author: formData.author,
         category: formData.category,
         description: formData.description,
-        isbn: formData.isbn,
-        publishedYear: formData.publishedYear ? parseInt(formData.publishedYear) : undefined,
-        copies: parseInt(formData.copies),
-        available: parseInt(formData.available),
+        isbn: formData.isbn?.trim() || undefined,
+        publishedYear: parsedPublishedYear,
+        copies: Number.isNaN(parsedCopies) ? undefined : parsedCopies,
+        available: Number.isNaN(parsedAvailable) ? undefined : parsedAvailable,
         addedAt: Timestamp.now(),
-      };
+      });
 
       // Upload image first if selected
       if (imageFile) {

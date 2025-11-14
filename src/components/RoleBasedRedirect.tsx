@@ -23,7 +23,7 @@ export const RoleBasedRedirect = () => {
           break;
         case "student":
         default:
-          navigate("/dashboard", { replace: true });
+          navigate("/landing", { replace: true });
           break;
       }
     }

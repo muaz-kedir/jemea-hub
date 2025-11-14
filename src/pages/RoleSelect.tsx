@@ -51,7 +51,7 @@ const RoleSelect = () => {
         </div>
 
         <Button
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate("/landing")}
           className="w-full h-12 rounded-full navy-bg hover:opacity-90 text-white"
           size="lg"
         >

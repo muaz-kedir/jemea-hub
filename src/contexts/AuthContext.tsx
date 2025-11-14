@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { FirebaseError } from "firebase/app";
 import { 
   User,
+  UserCredential,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
@@ -25,8 +27,8 @@ interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, role: UserRole) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<UserCredential>;
+  signUp: (email: string, password: string, role: UserRole, fullName?: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
   assignRole: (userId: string, role: UserRole) => Promise<void>;
@@ -89,30 +91,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    return await signInWithEmailAndPassword(auth, email, password);
   };
 
-  const signUp = async (email: string, password: string, role: UserRole = "student") => {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    
-    // Create user profile WITHOUT role (security best practice)
-    const userProfile = {
-      uid: userCredential.user.uid,
-      email: userCredential.user.email!,
-      firstName: "",
-      lastName: "",
-    };
-    
-    // Store profile in users collection
-    await setDoc(doc(db, "users", userCredential.user.uid), userProfile);
-    
-    // Store role in separate user_roles collection for security
-    await setDoc(doc(db, "user_roles", userCredential.user.uid), {
-      userId: userCredential.user.uid,
-      role,
-      assignedAt: new Date(),
-      assignedBy: "system"
-    });
+  const signUp = async (
+    email: string,
+    password: string,
+    role: UserRole = "student",
+    fullName?: string
+  ) => {
+    try {
+      const trimmedEmail = email.trim();
+      const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
+
+      const normalizedName = fullName?.trim() ?? "";
+      const [firstName = "", ...rest] = normalizedName.split(/\s+/);
+      const lastName = rest.join(" ");
+
+      // Create user profile WITHOUT role (security best practice)
+      const userProfile = {
+        uid: userCredential.user.uid,
+        email: userCredential.user.email!,
+        firstName,
+        lastName,
+      };
+
+      // Store profile in users collection
+      await setDoc(doc(db, "users", userCredential.user.uid), userProfile);
+
+      // Store role in separate user_roles collection for security
+      await setDoc(doc(db, "user_roles", userCredential.user.uid), {
+        userId: userCredential.user.uid,
+        role,
+        assignedAt: new Date(),
+        assignedBy: "system",
+      });
+    } catch (error) {
+      if (error instanceof FirebaseError) {
+        switch (error.code) {
+          case "auth/email-already-in-use":
+            throw new Error("This email is already registered. Try logging in instead.");
+          case "auth/weak-password":
+            throw new Error("Password is too weak. Use at least 6 characters.");
+          case "auth/invalid-email":
+            throw new Error("Invalid email address. Double-check the spelling.");
+          default:
+            throw new Error(error.message);
+        }
+      }
+      throw error;
+    }
   };
 
   const updateProfile = async (data: Partial<UserProfile>) => {
