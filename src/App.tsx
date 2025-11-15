@@ -23,6 +23,7 @@ import TrainingAdminDashboard from "./pages/TrainingAdminDashboard";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import TrainingRegistration from "./pages/TrainingRegistration";
+import TutorialRegistration from "./pages/TutorialRegistration";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/" element={<Splash />} />
             <Route path="/landing" element={<LandingPage />} />
             <Route path="/trainings/:trainingId/register" element={<TrainingRegistration />} />
+            <Route path="/tutorials/:tutorialId/register" element={<TutorialRegistration />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />

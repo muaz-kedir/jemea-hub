@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
@@ -6,31 +8,40 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  GraduationCap, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Users, 
-  Calendar,
-  Clock,
-  Search,
-  ArrowLeft,
-  CheckCircle,
-  XCircle
-} from "lucide-react";
-import { Link } from "react-router-dom";
-import { db } from "@/lib/firebase";
-import { 
-  collection, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc,
-  Timestamp 
-} from "firebase/firestore";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+
+import {
+  ArrowLeft,
+  Calendar,
+  CheckCircle,
+  Clock,
+  Edit,
+  GraduationCap,
+  Plus,
+  Search,
+  Trash2,
+  Users,
+} from "lucide-react";
+
+import { db } from "@/lib/firebase";
+import {
+  Timestamp,
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  updateDoc,
+} from "firebase/firestore";
 
 interface TutorialSession {
   id: string;
@@ -47,6 +58,33 @@ interface TutorialSession {
   imageUrl?: string;
   createdAt: any;
 }
+
+interface TutorialRegistrationRecord {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  studentId?: string;
+  department?: string;
+  batch?: string;
+  motivation?: string | null;
+  registeredAt?: any;
+}
+
+const formatDateTime = (value: any) => {
+  if (!value) return "N/A";
+  try {
+    if (typeof value === "string") {
+      return new Date(value).toLocaleString();
+    }
+    if (value.toDate) {
+      return value.toDate().toLocaleString();
+    }
+  } catch (error) {
+    console.warn("Unable to format date", error);
+  }
+  return String(value);
+};
 
 const TutorialAdminDashboard = () => {
   const { toast } = useToast();
@@ -80,6 +118,10 @@ const TutorialAdminDashboard = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [registrationsOpen, setRegistrationsOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<TutorialSession | null>(null);
+  const [registrations, setRegistrations] = useState<TutorialRegistrationRecord[]>([]);
+  const [registrationsLoading, setRegistrationsLoading] = useState(false);
 
   useEffect(() => {
     loadSessions();
@@ -258,7 +300,43 @@ const TutorialAdminDashboard = () => {
     upcomingSessions: sessions.filter(s => s.status === "upcoming").length,
     ongoingSessions: sessions.filter(s => s.status === "ongoing").length,
     completedSessions: sessions.filter(s => s.status === "completed").length,
-    totalEnrolled: sessions.reduce((sum, s) => sum + s.enrolledStudents, 0),
+    totalEnrolled: sessions.reduce((sum, s) => sum + (s.enrolledStudents ?? 0), 0),
+  };
+
+  const openRegistrations = async (session: TutorialSession) => {
+    setSelectedSession(session);
+    setRegistrationsOpen(true);
+    setRegistrations([]);
+    setRegistrationsLoading(true);
+    try {
+      const registrationsSnapshot = await getDocs(
+        collection(db, "tutorial_sessions", session.id, "registrations")
+      );
+      const registrationData = registrationsSnapshot.docs.map((doc): TutorialRegistrationRecord => {
+        const data = doc.data() as Record<string, any>;
+        return {
+          id: doc.id,
+          fullName: data.fullName ?? "",
+          email: data.email ?? "",
+          phone: data.phone ?? "",
+          studentId: data.studentId,
+          department: data.department,
+          batch: data.batch,
+          motivation: data.motivation ?? null,
+          registeredAt: data.registeredAt,
+        };
+      });
+      setRegistrations(registrationData);
+    } catch (error) {
+      console.error("Error loading registrations:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load registered students",
+        variant: "destructive",
+      });
+    } finally {
+      setRegistrationsLoading(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -567,6 +645,13 @@ const TutorialAdminDashboard = () => {
                 </div>
                 <div className="flex gap-2">
                   <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openRegistrations(session)}
+                  >
+                    View Registrations
+                  </Button>
+                  <Button
                     size="icon"
                     variant="ghost"
                     onClick={() => handleEdit(session)}
@@ -595,6 +680,67 @@ const TutorialAdminDashboard = () => {
           )}
         </div>
       </div>
+
+      <Dialog
+        open={registrationsOpen}
+        onOpenChange={(open) => {
+          setRegistrationsOpen(open);
+          if (!open) {
+            setSelectedSession(null);
+            setRegistrations([]);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Registered Students</DialogTitle>
+            <DialogDescription>
+              {selectedSession ? selectedSession.title : "Select a session to view registrations"}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-80 pr-4">
+            {registrationsLoading ? (
+              <div className="py-10 text-center text-sm text-muted-foreground">
+                Loading registrations...
+              </div>
+            ) : registrations.length === 0 ? (
+              <div className="py-10 text-center text-sm text-muted-foreground">
+                No students have registered yet.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {registrations.map((participant) => (
+                  <Card key={participant.id} className="p-4 border-0 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-sm">{participant.fullName}</p>
+                        <p className="text-sm text-muted-foreground">{participant.email}</p>
+                        <p className="text-sm text-muted-foreground">{participant.phone}</p>
+                        <div className="mt-2 grid sm:grid-cols-2 gap-2 text-xs text-muted-foreground">
+                          <span><strong>ID:</strong> {participant.studentId || "N/A"}</span>
+                          <span><strong>Dept:</strong> {participant.department || "N/A"}</span>
+                          <span><strong>Batch:</strong> {participant.batch || "N/A"}</span>
+                        </div>
+                      </div>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {participant.registeredAt ? formatDateTime(participant.registeredAt) : ""}
+                      </span>
+                    </div>
+                    {participant.motivation ? (
+                      <p className="mt-3 text-sm text-muted-foreground">
+                        "{participant.motivation}"
+                      </p>
+                    ) : null}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+          <DialogFooter>
+            <Button onClick={() => setRegistrationsOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>

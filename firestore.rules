@@ -53,6 +53,14 @@ service cloud.firestore {
       allow read: if request.auth != null; // All authenticated users can read
       allow create, update, delete: if request.auth != null; // TEMPORARY: Allow all authenticated users
     }
+
+    match /tutorial_sessions/{sessionId}/registrations/{registrationId} {
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+
+      allow read: if request.auth != null
+                  && (resource.data.userId == request.auth.uid || isSuperAdmin());
+    }
     
     // Library resources collection
     match /library_resources/{resourceId} {

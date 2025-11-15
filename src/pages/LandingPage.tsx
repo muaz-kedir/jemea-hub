@@ -518,7 +518,12 @@ const LandingPage = () => {
                         {tutorial.location || "TBA"}
                       </div>
                     </div>
-                    <Button variant="outline" className="w-full rounded-full" size="sm">
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-full"
+                      size="sm"
+                      onClick={() => navigate(`/tutorials/${tutorial.id}/register`)}
+                    >
                       Join Session
                     </Button>
                   </Card>
