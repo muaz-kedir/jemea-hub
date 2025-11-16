@@ -15,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { 
   Award, 
   Plus, 
@@ -55,6 +56,7 @@ interface Training {
   location: string;
   level: "beginner" | "intermediate" | "advanced";
   status: "upcoming" | "active" | "completed" | "cancelled";
+  deliveryMode?: "online" | "in-person";
   imageUrl?: string;
   createdAt: any;
 }
@@ -105,6 +107,7 @@ const TrainingAdminDashboard = () => {
     location: string;
     level: "beginner" | "intermediate" | "advanced";
     status: "upcoming" | "active" | "completed" | "cancelled";
+    deliveryMode: "online" | "in-person";
   }>({
     title: "",
     trainer: "",
@@ -118,6 +121,7 @@ const TrainingAdminDashboard = () => {
     location: "",
     level: "beginner",
     status: "upcoming",
+    deliveryMode: "in-person",
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -200,6 +204,7 @@ const TrainingAdminDashboard = () => {
         location: formData.location,
         level: formData.level,
         status: formData.status,
+        deliveryMode: formData.deliveryMode,
         createdAt: Timestamp.now(),
       };
 
@@ -272,6 +277,7 @@ const TrainingAdminDashboard = () => {
       location: training.location,
       level: training.level,
       status: training.status,
+      deliveryMode: training.deliveryMode || "in-person",
     });
     setImagePreview(training.imageUrl || null);
     setImageFile(null);
@@ -292,6 +298,7 @@ const TrainingAdminDashboard = () => {
       location: "",
       level: "beginner",
       status: "upcoming",
+      deliveryMode: "in-person",
     });
     setImageFile(null);
     setImagePreview(null);
@@ -538,10 +545,38 @@ const TrainingAdminDashboard = () => {
                     id="location"
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    placeholder="e.g., Main Hall, Online"
+                    placeholder={
+                      formData.deliveryMode === "online"
+                        ? "e.g., Zoom or Google Meet link"
+                        : "e.g., Main Hall, Training Center"
+                    }
                     required
                   />
                 </div>
+              </div>
+
+              <div>
+                <Label>Delivery Mode *</Label>
+                <RadioGroup
+                  value={formData.deliveryMode}
+                  onValueChange={(value: "online" | "in-person") =>
+                    setFormData({ ...formData, deliveryMode: value })
+                  }
+                  className="grid gap-3 sm:grid-cols-2"
+                >
+                  <div className="flex items-center gap-3 rounded-md border p-3 transition hover:border-primary">
+                    <RadioGroupItem value="in-person" id="training-delivery-in-person" />
+                    <label htmlFor="training-delivery-in-person" className="text-sm font-medium cursor-pointer">
+                      In-person (Training Center)
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-md border p-3 transition hover:border-primary">
+                    <RadioGroupItem value="online" id="training-delivery-online" />
+                    <label htmlFor="training-delivery-online" className="text-sm font-medium cursor-pointer">
+                      Online (Google Meet/Zoom)
+                    </label>
+                  </div>
+                </RadioGroup>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -692,6 +727,9 @@ const TrainingAdminDashboard = () => {
                   </div>
                   <p className="text-sm text-muted-foreground">
                     <strong>Location:</strong> {training.location}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Delivery:</strong> {training.deliveryMode === "online" ? "Online (Google Meet/Zoom)" : "In-person"}
                   </p>
                 </div>
                 <div className="flex gap-2">

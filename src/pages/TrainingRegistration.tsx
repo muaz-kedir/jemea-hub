@@ -31,6 +31,7 @@ interface Training {
   maxParticipants?: number;
   enrolledParticipants?: number;
   location?: string;
+  deliveryMode?: "online" | "in-person";
   level?: string;
   imageUrl?: string;
 }
@@ -142,6 +143,29 @@ const TrainingRegistration = () => {
       };
 
       await addDoc(collection(db, "trainings", trainingId, "registrations"), registrationData);
+
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+      try {
+        await fetch(`${API_URL}/api/notify/registration`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            recipientEmail: registrationData.email,
+            participantName: registrationData.fullName,
+            programTitle: training.title,
+            programType: "training",
+            deliveryMode: (training as any).deliveryMode,
+            meetingLink: (training as any).deliveryMode === "online" ? training.location : undefined,
+            location: (training as any).deliveryMode !== "online" ? training.location : undefined,
+            schedule: training.startDate && training.endDate ? `${formatDate(training.startDate)} - ${formatDate(training.endDate)}` : undefined,
+          }),
+        });
+      } catch (notifyError) {
+        console.warn("Failed to send confirmation email:", notifyError);
+      }
 
       if (typeof training.enrolledParticipants === "number") {
         await updateDoc(doc(db, "trainings", trainingId), {

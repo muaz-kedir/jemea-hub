@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Dialog,
   DialogContent,
@@ -54,6 +55,7 @@ interface TutorialSession {
   maxStudents: number;
   enrolledStudents: number;
   location: string;
+  deliveryMode?: "online" | "in-person";
   status: "upcoming" | "ongoing" | "completed" | "cancelled";
   imageUrl?: string;
   createdAt: any;
@@ -102,6 +104,7 @@ const TutorialAdminDashboard = () => {
     maxStudents: string;
     enrolledStudents: string;
     location: string;
+    deliveryMode: "online" | "in-person";
     status: "upcoming" | "ongoing" | "completed" | "cancelled";
   }>({
     title: "",
@@ -113,6 +116,7 @@ const TutorialAdminDashboard = () => {
     maxStudents: "30",
     enrolledStudents: "0",
     location: "",
+    deliveryMode: "in-person",
     status: "upcoming",
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -193,6 +197,7 @@ const TutorialAdminDashboard = () => {
         maxStudents: parseInt(formData.maxStudents),
         enrolledStudents: parseInt(formData.enrolledStudents),
         location: formData.location,
+        deliveryMode: formData.deliveryMode,
         status: formData.status,
         createdAt: Timestamp.now(),
       };
@@ -263,6 +268,7 @@ const TutorialAdminDashboard = () => {
       maxStudents: session.maxStudents.toString(),
       enrolledStudents: session.enrolledStudents.toString(),
       location: session.location,
+      deliveryMode: session.deliveryMode || "in-person",
       status: session.status,
     });
     setImagePreview(session.imageUrl || null);
@@ -281,6 +287,7 @@ const TutorialAdminDashboard = () => {
       maxStudents: "30",
       enrolledStudents: "0",
       location: "",
+      deliveryMode: "in-person",
       status: "upcoming",
     });
     setImageFile(null);
@@ -508,9 +515,37 @@ const TutorialAdminDashboard = () => {
                   id="location"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  placeholder="e.g., Room 101, Online (Zoom)"
+                  placeholder={
+                    formData.deliveryMode === "online"
+                      ? "e.g., Zoom or Google Meet link"
+                      : "e.g., Room 101, Main Campus"
+                  }
                   required
                 />
+              </div>
+
+              <div>
+                <Label>Delivery Mode *</Label>
+                <RadioGroup
+                  value={formData.deliveryMode}
+                  onValueChange={(value: "online" | "in-person") =>
+                    setFormData({ ...formData, deliveryMode: value })
+                  }
+                  className="grid gap-3 sm:grid-cols-2"
+                >
+                  <div className="flex items-center gap-3 rounded-md border p-3 transition hover:border-primary">
+                    <RadioGroupItem value="in-person" id="delivery-in-person" />
+                    <label htmlFor="delivery-in-person" className="text-sm font-medium cursor-pointer">
+                      In-person (Training Center)
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-md border p-3 transition hover:border-primary">
+                    <RadioGroupItem value="online" id="delivery-online" />
+                    <label htmlFor="delivery-online" className="text-sm font-medium cursor-pointer">
+                      Online (Google Meet/Zoom)
+                    </label>
+                  </div>
+                </RadioGroup>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -641,6 +676,9 @@ const TutorialAdminDashboard = () => {
                   </div>
                   <p className="text-sm text-muted-foreground">
                     <strong>Location:</strong> {session.location}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Delivery:</strong> {session.deliveryMode === "online" ? "Online (Google Meet/Zoom)" : "In-person"}
                   </p>
                 </div>
                 <div className="flex gap-2">

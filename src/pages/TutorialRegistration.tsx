@@ -30,6 +30,7 @@ interface TutorialSession {
   maxStudents?: number;
   enrolledStudents?: number;
   location?: string;
+  deliveryMode?: "online" | "in-person";
   status?: string;
   imageUrl?: string;
 }
@@ -158,6 +159,29 @@ const TutorialRegistration = () => {
       };
 
       await addDoc(collection(db, "tutorial_sessions", tutorialId, "registrations"), registrationData);
+
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+      try {
+        await fetch(`${API_URL}/api/notify/registration`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            recipientEmail: registrationData.email,
+            participantName: registrationData.fullName,
+            programTitle: tutorial.title,
+            programType: "tutorial",
+            deliveryMode: (tutorial as any).deliveryMode,
+            meetingLink: tutorial.deliveryMode === "online" ? tutorial.location : undefined,
+            location: tutorial.deliveryMode !== "online" ? tutorial.location : undefined,
+            schedule: tutorial.schedule ? formatDateTime(tutorial.schedule) : undefined,
+          }),
+        });
+      } catch (notifyError) {
+        console.warn("Failed to send confirmation email:", notifyError);
+      }
 
       if (typeof tutorial.enrolledStudents === "number") {
         await updateDoc(doc(db, "tutorial_sessions", tutorialId), {

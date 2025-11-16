@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { verifyCloudinaryConfig } from './config/cloudinary.js';
 import uploadRoute from './routes/uploadRoute.js';
+import notificationRoute from './routes/notificationRoute.js';
 
 // Load environment variables
 dotenv.config();
@@ -68,6 +69,7 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api', uploadRoute);
+app.use('/api', notificationRoute);
 
 // 404 handler
 app.use((req, res) => {
