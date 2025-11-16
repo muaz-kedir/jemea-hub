@@ -14,6 +14,7 @@ import {
   Heart,
   TrendingUp
 } from "lucide-react";
+import StarBorder from "@/components/StarBorder";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -353,15 +354,30 @@ const LandingPage = () => {
             </p>
             <div ref={buttonsRef} className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/signup">
-                <Button size="lg" className="bg-white text-gray-900 hover:bg-white/90 hover:scale-105 transition-transform rounded-full px-8 shadow-xl">
-                  Get Started
-                  <ChevronRight className="w-5 h-5 ml-2" />
-                </Button>
+                <StarBorder
+                  as="button"
+                  color="cyan"
+                  speed="5s"
+                  thickness={8}
+                  className="group rounded-full"
+                  innerClassName="rounded-full bg-white text-gray-900 px-8 py-3 font-semibold text-lg transition-transform duration-300 group-hover:bg-white/90 group-focus-visible:bg-white/90"
+                >
+                  <span>Get Started</span>
+                  <ChevronRight className="w-5 h-5" />
+                </StarBorder>
               </Link>
               <a href="#sectors">
-                <Button size="lg" variant="outline" className="border-white/80 text-white hover:bg-white/20 hover:scale-105 transition-transform backdrop-blur-sm rounded-full px-8 shadow-xl">
-                  Explore Sectors
-                </Button>
+                <StarBorder
+                  as="button"
+                  color="cyan"
+                  speed="5s"
+                  thickness={8}
+                  className="group rounded-full"
+                  innerClassName="rounded-full border border-white/60 text-white px-8 py-3 font-semibold text-lg backdrop-blur-sm transition-transform duration-300 group-hover:bg-white/10 group-focus-visible:bg-white/10"
+                  innerStyle={{ background: "rgba(255,255,255,0.03)" }}
+                >
+                  <span>Explore Sectors</span>
+                </StarBorder>
               </a>
             </div>
           </div>
