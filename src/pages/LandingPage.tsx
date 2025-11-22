@@ -12,10 +12,13 @@ import {
   Target,
   Eye,
   Heart,
-  TrendingUp
+  TrendingUp,
+  ThumbsUp,
+  ThumbsDown
 } from "lucide-react";
 import StarBorder from "@/components/StarBorder";
 import { Card } from "@/components/ui/card";
+import { SpotlightCard } from "@/components/SpotlightCard";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +36,44 @@ import gsap from "gsap";
 
 type FirestoreRecord = DocumentData & { id: string };
 
+type HadithQuote = {
+  text: string;
+  narrator?: string;
+  collection?: string;
+  reference?: string;
+};
+
+const getDayOfYear = (date: Date) => {
+  const start = new Date(date.getFullYear(), 0, 0);
+  const diff = date.getTime() - start.getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+};
+
+const parseHadithEnglish = (english: string) => {
+  const trimmed = english.trim();
+  if (!trimmed) {
+    return { text: "", narrator: undefined };
+  }
+
+  const colonIndex = trimmed.indexOf(":");
+  if (colonIndex > 0 && colonIndex < 160) {
+    const narratorRaw = trimmed.slice(0, colonIndex).replace(/^Narrated\s*/i, "").trim();
+    const text = trimmed.slice(colonIndex + 1).trim();
+    return {
+      text: text || trimmed,
+      narrator: narratorRaw ? `Narrated ${narratorRaw}` : undefined,
+    };
+  }
+
+  return { text: trimmed, narrator: undefined };
+};
+
+const FALLBACK_HADITH: HadithQuote = {
+  text: "Seek knowledge from the cradle to the grave.",
+  narrator: "Prophet Muhammad (PBUH)",
+  collection: "Hadith",
+};
+
 const LandingPage = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [upcomingTrainings, setUpcomingTrainings] = useState<FirestoreRecord[]>([]);
@@ -40,6 +81,12 @@ const LandingPage = () => {
   const [latestLibraryUploads, setLatestLibraryUploads] = useState<FirestoreRecord[]>([]);
   const [selectedLibraryResource, setSelectedLibraryResource] = useState<FirestoreRecord | null>(null);
   const [loading, setLoading] = useState(true);
+  const [likeCount, setLikeCount] = useState(0);
+  const [dislikeCount, setDislikeCount] = useState(0);
+  const [reaction, setReaction] = useState<"like" | "dislike" | null>(null);
+  const [dailyQuote, setDailyQuote] = useState<HadithQuote | null>(null);
+  const [hadithLoading, setHadithLoading] = useState(true);
+  const [hadithError, setHadithError] = useState<string | null>(null);
   const navigate = useNavigate();
   
   // Refs for GSAP animations
@@ -51,6 +98,144 @@ const LandingPage = () => {
 
   useEffect(() => {
     loadData();
+  }, []);
+
+  const sliderRefs = {
+    trainings: useRef<HTMLDivElement>(null),
+    tutorials: useRef<HTMLDivElement>(null),
+    library: useRef<HTMLDivElement>(null),
+  };
+
+  useEffect(() => {
+    const containers = Object.values(sliderRefs).map((ref) => ref.current).filter(Boolean) as HTMLDivElement[];
+
+    const handleWheel = (event: WheelEvent) => {
+      const target = event.currentTarget as HTMLDivElement;
+      if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+        event.preventDefault();
+        target.scrollTo({
+          left: target.scrollLeft + event.deltaY,
+          behavior: "smooth",
+        });
+      }
+    };
+
+    const cleanups: Array<() => void> = [];
+
+    containers.forEach((container) => {
+      container.addEventListener("wheel", handleWheel, { passive: false });
+
+      let animationId: number;
+      let isPaused = false;
+      const scrollSpeed = 0.8;
+
+      const step = () => {
+        if (!isPaused && container.scrollWidth > container.clientWidth) {
+          const maxScrollLeft = container.scrollWidth - container.clientWidth;
+          const next = container.scrollLeft + scrollSpeed;
+          container.scrollLeft = next >= maxScrollLeft ? 0 : next;
+        }
+        animationId = requestAnimationFrame(step);
+      };
+
+      animationId = requestAnimationFrame(step);
+
+      const pause = () => {
+        isPaused = true;
+      };
+
+      const resume = () => {
+        isPaused = false;
+      };
+
+      container.addEventListener("mouseenter", pause);
+      container.addEventListener("mouseleave", resume);
+      container.addEventListener("touchstart", pause, { passive: true });
+      container.addEventListener("touchend", resume);
+      container.addEventListener("touchcancel", resume);
+      container.addEventListener("focusin", pause);
+      container.addEventListener("focusout", resume);
+
+      cleanups.push(() => {
+        container.removeEventListener("wheel", handleWheel);
+        container.removeEventListener("mouseenter", pause);
+        container.removeEventListener("mouseleave", resume);
+        container.removeEventListener("touchstart", pause);
+        container.removeEventListener("touchend", resume);
+        container.removeEventListener("touchcancel", resume);
+        container.removeEventListener("focusin", pause);
+        container.removeEventListener("focusout", resume);
+        cancelAnimationFrame(animationId);
+      });
+    });
+
+    return () => {
+      cleanups.forEach((cleanup) => cleanup());
+    };
+  }, [sliderRefs.trainings, sliderRefs.tutorials, sliderRefs.library]);
+
+  useEffect(() => {
+    const fetchHadith = async () => {
+      try {
+        setHadithLoading(true);
+        setHadithError(null);
+
+        const today = new Date();
+        const dayOfYear = getDayOfYear(today);
+        const bookSlug = "bukhari";
+        const hadithNumber = (dayOfYear % 6638) + 1; // Bukhari has 6638 hadiths in this API
+
+        const cachedKey = `dailyHadith-${bookSlug}-${hadithNumber}`;
+        const cachedItem = localStorage.getItem(cachedKey);
+        if (cachedItem) {
+          const parsed = JSON.parse(cachedItem) as { date: string; quote: HadithQuote };
+          if (parsed.date === today.toISOString().slice(0, 10)) {
+            setDailyQuote(parsed.quote);
+            setHadithLoading(false);
+            return;
+          }
+        }
+
+        const response = await fetch(
+          `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-bukhari/${hadithNumber}.json`
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch hadith: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const hadith = data?.hadiths?.[0];
+        if (!hadith) {
+          throw new Error("No hadith found for today");
+        }
+
+        const parsed = parseHadithEnglish(hadith.text ?? "");
+
+        const quote: HadithQuote = {
+          text: parsed.text || "Seek knowledge from the cradle to the grave.",
+          narrator: parsed.narrator,
+          collection: data?.metadata?.name ?? "Sahih al-Bukhari",
+          reference: hadith.reference
+            ? `Book ${hadith.reference.book}, Hadith ${hadith.reference.hadith}`
+            : undefined,
+        };
+
+        setDailyQuote(quote);
+        localStorage.setItem(
+          cachedKey,
+          JSON.stringify({ date: today.toISOString().slice(0, 10), quote })
+        );
+      } catch (error) {
+        console.error(error);
+        setDailyQuote(FALLBACK_HADITH);
+        setHadithError(error instanceof Error ? error.message : "Unknown error fetching hadith");
+      } finally {
+        setHadithLoading(false);
+      }
+    };
+
+    fetchHadith();
   }, []);
 
   // GSAP Hero Animations
@@ -201,10 +386,29 @@ const LandingPage = () => {
     }
   };
 
-  const dailyQuote = {
-    text: "Seek knowledge from the cradle to the grave.",
-    author: "Prophet Muhammad (PBUH)",
-    type: "Hadith"
+  const handleReaction = (type: "like" | "dislike") => {
+    if (reaction === type) {
+      setReaction(null);
+      if (type === "like") {
+        setLikeCount((prev) => Math.max(prev - 1, 0));
+      } else {
+        setDislikeCount((prev) => Math.max(prev - 1, 0));
+      }
+      return;
+    }
+
+    setReaction(type);
+    if (type === "like") {
+      setLikeCount((prev) => prev + 1);
+      if (reaction === "dislike") {
+        setDislikeCount((prev) => Math.max(prev - 1, 0));
+      }
+    } else {
+      setDislikeCount((prev) => prev + 1);
+      if (reaction === "like") {
+        setLikeCount((prev) => Math.max(prev - 1, 0));
+      }
+    }
   };
 
   const sectors = [
@@ -403,21 +607,69 @@ const LandingPage = () => {
       </section>
 
       {/* Daily Quote/Hadith */}
-      <section className="py-8 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20">
+      <section className="py-8 bg-slate-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Card className="p-6 border-0 shadow-lg bg-white/80 dark:bg-gray-900/80 backdrop-blur">
+          <Card className="p-6 border border-slate-800 shadow-lg bg-slate-900/80 backdrop-blur text-slate-100">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center flex-shrink-0">
                 <Bell className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 mb-2">
-                  {dailyQuote.type} of the Day
+                <p className="text-sm font-semibold text-amber-300 mb-2">
+                  {hadithLoading ? "Loading..." : "Hadith of the Day"}
                 </p>
-                <p className="text-lg md:text-xl font-medium italic mb-2">
-                  "{dailyQuote.text}"
-                </p>
-                <p className="text-sm text-muted-foreground">— {dailyQuote.author}</p>
+                {hadithError ? (
+                  <p className="text-sm text-red-300">{hadithError}</p>
+                ) : hadithLoading ? (
+                  <p className="text-lg text-slate-200/80">Fetching today's hadith...</p>
+                ) : dailyQuote ? (
+                  <>
+                    <p className="text-lg md:text-xl font-medium italic mb-2 text-slate-100">
+                      "{dailyQuote.text}"
+                    </p>
+                    <p className="text-sm text-slate-400">
+                      — {dailyQuote.narrator ?? "Unknown narrator"}
+                    </p>
+                    {dailyQuote.reference ? (
+                      <p className="text-xs text-slate-500 mt-2">
+                        {dailyQuote.collection} · {dailyQuote.reference}
+                      </p>
+                    ) : dailyQuote.collection ? (
+                      <p className="text-xs text-slate-500 mt-2">{dailyQuote.collection}</p>
+                    ) : null}
+                  </>
+                ) : null}
+
+                <div className="mt-6 flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleReaction("like")}
+                    className={`flex items-center gap-2 rounded-full border transition-colors ${
+                      reaction === "like"
+                        ? "bg-white text-slate-900 border-white"
+                        : "bg-slate-900/60 border-slate-700 text-slate-200 hover:bg-slate-800/80 hover:text-white"
+                    }`}
+                  >
+                    <ThumbsUp className={`w-4 h-4 ${reaction === "like" ? "text-slate-900" : ""}`} />
+                    <span>Like</span>
+                    <span className="text-xs font-semibold">{likeCount}</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleReaction("dislike")}
+                    className={`flex items-center gap-2 rounded-full border transition-colors ${
+                      reaction === "dislike"
+                        ? "bg-white text-slate-900 border-white"
+                        : "bg-slate-900/60 border-slate-700 text-slate-200 hover:bg-slate-800/80 hover:text-white"
+                    }`}
+                  >
+                    <ThumbsDown className={`w-4 h-4 ${reaction === "dislike" ? "text-slate-900" : ""}`} />
+                    <span>Dislike</span>
+                    <span className="text-xs font-semibold">{dislikeCount}</span>
+                  </Button>
+                </div>
               </div>
             </div>
           </Card>
@@ -447,50 +699,55 @@ const LandingPage = () => {
                 <p className="text-muted-foreground">No training programs available yet</p>
               </Card>
             ) : (
-              <div className="grid md:grid-cols-3 gap-6">
-                {upcomingTrainings.map((training) => (
-                  <Card key={training.id} className="p-6 hover:shadow-lg transition-shadow border-0 shadow-md">
-                    {training.imageUrl ? (
-                      <img
-                        src={training.imageUrl}
-                        alt={training.title}
-                        className="w-full h-48 object-cover rounded-lg mb-4"
-                        onError={(e) => {
-                          console.error("Failed to load training image:", training.imageUrl);
-                          e.currentTarget.style.display = 'none';
-                        }}
-                        onLoad={() => console.log("Training image loaded:", training.imageUrl)}
-                      />
-                    ) : (
-                      <div className="text-5xl mb-4">{getTrainingEmoji(training.category)}</div>
-                    )}
-                    <h3 className="text-xl font-bold mb-2">{training.title}</h3>
-                    <div className="space-y-2 text-sm text-muted-foreground mb-4">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        <span>{formatDate(training.startDate)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <GraduationCap className="w-4 h-4" />
-                        <span>{training.trainer}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4" />
-                        <span>{training.enrolledParticipants || 0} participants</span>
-                      </div>
-                    </div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500 mb-3">
-                      Prepare for registration
-                    </p>
-                    <Button
-                      className="w-full rounded-full"
-                      size="sm"
-                      onClick={() => navigate(`/trainings/${training.id}/register`)}
+              <div ref={sliderRefs.trainings} className="overflow-x-auto">
+                <div className="flex gap-6 snap-x snap-mandatory pb-4">
+                  {upcomingTrainings.map((training) => (
+                    <SpotlightCard
+                      key={training.id}
+                      className="p-6 w-[340px] sm:w-[360px] flex-shrink-0 bg-slate-900/70"
                     >
-                      Register Now
-                    </Button>
-                  </Card>
-                ))}
+                      {training.imageUrl ? (
+                        <img
+                          src={training.imageUrl}
+                          alt={training.title}
+                          className="w-full h-48 object-cover rounded-lg mb-4"
+                          onError={(e) => {
+                            console.error("Failed to load training image:", training.imageUrl);
+                            e.currentTarget.style.display = 'none';
+                          }}
+                          onLoad={() => console.log("Training image loaded:", training.imageUrl)}
+                        />
+                      ) : (
+                        <div className="text-5xl mb-4">{getTrainingEmoji(training.category)}</div>
+                      )}
+                      <h3 className="text-xl font-bold mb-2">{training.title}</h3>
+                      <div className="space-y-2 text-sm text-muted-foreground mb-4">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          <span>{formatDate(training.startDate)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <GraduationCap className="w-4 h-4" />
+                          <span>{training.trainer}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4" />
+                          <span>{training.enrolledParticipants || 0} participants</span>
+                        </div>
+                      </div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500 mb-3">
+                        Prepare for registration
+                      </p>
+                      <Button
+                        className="w-full rounded-full"
+                        size="sm"
+                        onClick={() => navigate(`/trainings/${training.id}/register`)}
+                      >
+                        Register Now
+                      </Button>
+                    </SpotlightCard>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -514,54 +771,59 @@ const LandingPage = () => {
                 <p className="text-muted-foreground">No tutorial sessions available yet</p>
               </Card>
             ) : (
-              <div className="grid md:grid-cols-3 gap-6">
-                {activeTutorials.map((tutorial) => (
-                  <Card key={tutorial.id} className="p-6 hover:shadow-lg transition-shadow border-0 shadow-md">
-                    {tutorial.imageUrl && (
-                      <img
-                        src={tutorial.imageUrl}
-                        alt={tutorial.title}
-                        className="w-full h-48 object-cover rounded-lg mb-4"
-                        onError={(e) => {
-                          console.error("Failed to load tutorial image:", tutorial.imageUrl);
-                          e.currentTarget.style.display = 'none';
-                        }}
-                        onLoad={() => console.log("Tutorial image loaded:", tutorial.imageUrl)}
-                      />
-                    )}
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
-                        <GraduationCap className="w-6 h-6 text-white" />
-                      </div>
-                      <span className="text-xs bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
-                        {tutorial.status || "Active"}
-                      </span>
-                    </div>
-                    <h3 className="text-xl font-bold mb-2">{tutorial.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-3">{tutorial.subject}</p>
-                    <div className="space-y-2 text-sm mb-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Tutor:</span>
-                        <span className="font-medium">{tutorial.tutor}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Students:</span>
-                        <span className="font-medium">{tutorial.enrolledStudents || 0}</span>
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-2">
-                        {tutorial.location || "TBA"}
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      className="w-full rounded-full"
-                      size="sm"
-                      onClick={() => navigate(`/tutorials/${tutorial.id}/register`)}
+              <div ref={sliderRefs.tutorials} className="overflow-x-auto">
+                <div className="flex gap-6 snap-x snap-mandatory pb-4">
+                  {activeTutorials.map((tutorial) => (
+                    <SpotlightCard
+                      key={tutorial.id}
+                      className="p-6 w-[340px] sm:w-[360px] flex-shrink-0 bg-slate-900/70"
                     >
-                      Join Session
-                    </Button>
-                  </Card>
-                ))}
+                      {tutorial.imageUrl && (
+                        <img
+                          src={tutorial.imageUrl}
+                          alt={tutorial.title}
+                          className="w-full h-48 object-cover rounded-lg mb-4"
+                          onError={(e) => {
+                            console.error("Failed to load tutorial image:", tutorial.imageUrl);
+                            e.currentTarget.style.display = 'none';
+                          }}
+                          onLoad={() => console.log("Tutorial image loaded:", tutorial.imageUrl)}
+                        />
+                      )}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+                          <GraduationCap className="w-6 h-6 text-white" />
+                        </div>
+                        <span className="text-xs bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
+                          {tutorial.status || "Active"}
+                        </span>
+                      </div>
+                      <h3 className="text-xl font-bold mb-2">{tutorial.title}</h3>
+                      <p className="text-sm text-muted-foreground mb-3">{tutorial.subject}</p>
+                      <div className="space-y-2 text-sm mb-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Tutor:</span>
+                          <span className="font-medium">{tutorial.tutor}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Students:</span>
+                          <span className="font-medium">{tutorial.enrolledStudents || 0}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-2">
+                          {tutorial.location || "TBA"}
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        className="w-full rounded-full"
+                        size="sm"
+                        onClick={() => navigate(`/tutorials/${tutorial.id}/register`)}
+                      >
+                        Join Session
+                      </Button>
+                    </SpotlightCard>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -585,57 +847,59 @@ const LandingPage = () => {
                 <p className="text-muted-foreground">No library resources available yet</p>
               </Card>
             ) : (
-              <div className="grid md:grid-cols-3 gap-6">
-                {latestLibraryUploads.map((book) => (
-                  <Card
-                    key={book.id}
-                    className="p-6 border-0 shadow-md"
-                  >
-                    <div className="flex items-start gap-4 mb-4">
-                      {book.imageUrl ? (
-                        <img
-                          src={book.imageUrl}
-                          alt={book.title}
-                          className="w-16 h-24 object-cover rounded-lg flex-shrink-0"
-                          onError={(e) => {
-                            console.error("Failed to load image:", book.imageUrl);
-                            e.currentTarget.style.display = 'none';
-                          }}
-                          onLoad={() => console.log("Image loaded successfully:", book.imageUrl)}
-                        />
-                      ) : (
-                        <div className="w-16 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <BookOpen className="w-8 h-8 text-white" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold mb-1 line-clamp-2">{book.title}</h3>
-                        <p className="text-sm text-muted-foreground">{book.author}</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2 text-sm mb-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Category:</span>
-                        <span className="font-medium">{book.category}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Copies:</span>
-                        <span className="font-medium">{book.available || 0}/{book.copies || 0}</span>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Added {getTimeAgo(book.addedAt)}
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      className="w-full rounded-full"
-                      size="sm"
-                      onClick={() => setSelectedLibraryResource(book)}
+              <div ref={sliderRefs.library} className="overflow-x-auto">
+                <div className="flex gap-6 snap-x snap-mandatory pb-4">
+                  {latestLibraryUploads.map((book) => (
+                    <SpotlightCard
+                      key={book.id}
+                      className="p-6 w-[340px] sm:w-[360px] flex-shrink-0 bg-slate-900/70"
                     >
-                      View Details
-                    </Button>
-                  </Card>
-                ))}
+                      <div className="flex items-start gap-4 mb-4">
+                        {book.imageUrl ? (
+                          <img
+                            src={book.imageUrl}
+                            alt={book.title}
+                            className="w-16 h-24 object-cover rounded-lg flex-shrink-0"
+                            onError={(e) => {
+                              console.error("Failed to load image:", book.imageUrl);
+                              e.currentTarget.style.display = 'none';
+                            }}
+                            onLoad={() => console.log("Image loaded successfully:", book.imageUrl)}
+                          />
+                        ) : (
+                          <div className="w-16 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <BookOpen className="w-8 h-8 text-white" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold mb-1 line-clamp-2">{book.title}</h3>
+                          <p className="text-sm text-muted-foreground">{book.author}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2 text-sm mb-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Category:</span>
+                          <span className="font-medium">{book.category}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Copies:</span>
+                          <span className="font-medium">{book.available || 0}/{book.copies || 0}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Added {getTimeAgo(book.addedAt)}
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        className="w-full rounded-full"
+                        size="sm"
+                        onClick={() => setSelectedLibraryResource(book)}
+                      >
+                        View Details
+                      </Button>
+                    </SpotlightCard>
+                  ))}
+                </div>
               </div>
             )}
           </div>
