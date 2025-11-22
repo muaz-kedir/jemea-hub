@@ -15,7 +15,6 @@ import {
   TrendingUp
 } from "lucide-react";
 import StarBorder from "@/components/StarBorder";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   Dialog,
@@ -241,7 +240,7 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation Bar */}
-      <nav className="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b shadow-sm">
+      <nav className="sticky top-0 z-50 bg-slate-950/90 backdrop-blur-lg border-b border-slate-800 shadow-sm text-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -249,39 +248,48 @@ const LandingPage = () => {
               <HumsjLogo size={48} className="flex-shrink-0" />
               <div className="flex flex-col">
                 <span className="text-lg font-bold text-primary leading-tight">HUMSJ</span>
-                <span className="text-xs text-muted-foreground leading-tight hidden sm:block">Haramaya University</span>
+                <span className="text-xs text-slate-400 leading-tight hidden sm:block">Haramaya University</span>
               </div>
             </Link>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-8">
-              <a href="#about" className="text-sm font-medium hover:text-primary transition-colors">
+              <a href="#about" className="text-sm font-medium text-slate-200 hover:text-white transition-colors">
                 About
               </a>
-              <a href="#mission" className="text-sm font-medium hover:text-primary transition-colors">
+              <a href="#mission" className="text-sm font-medium text-slate-200 hover:text-white transition-colors">
                 Mission
               </a>
-              <a href="#vision" className="text-sm font-medium hover:text-primary transition-colors">
+              <a href="#vision" className="text-sm font-medium text-slate-200 hover:text-white transition-colors">
                 Vision
               </a>
-              <a href="#goals" className="text-sm font-medium hover:text-primary transition-colors">
+              <a href="#goals" className="text-sm font-medium text-slate-200 hover:text-white transition-colors">
                 Goals
               </a>
             </div>
 
             {/* Auth Buttons */}
             <div className="hidden md:flex items-center gap-3">
+              <Link
+                to="/notifications"
+                className="group flex items-center justify-center rounded-full p-2 text-slate-200 transition-colors hover:bg-slate-800/60 hover:text-white"
+                aria-label="View notifications"
+              >
+                <Bell className="h-5 w-5 transition-colors group-hover:text-white" />
+              </Link>
               <Link to="/login">
-                <Button variant="ghost" size="sm">Login</Button>
+                <Button variant="ghost" size="sm" className="text-white hover:bg-white hover:text-slate-900">
+                  Login
+                </Button>
               </Link>
               <Link to="/signup">
-                <Button size="sm" className="rounded-full">Sign Up</Button>
+                <Button size="sm" className="rounded-full bg-white text-slate-900 hover:bg-slate-900 hover:text-white">Sign Up</Button>
               </Link>
             </div>
 
             {/* Mobile Menu Button */}
             <button
-              className="md:hidden p-2"
+              className="md:hidden p-2 text-slate-200"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -291,26 +299,35 @@ const LandingPage = () => {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t bg-white dark:bg-gray-900">
+          <div className="md:hidden border-t border-slate-800 bg-slate-950">
             <div className="px-4 py-4 space-y-3">
-              <a href="#about" className="block py-2 text-sm font-medium hover:text-primary">
+              <a href="#about" className="block py-2 text-sm font-medium text-slate-200 hover:text-white">
                 About
               </a>
-              <a href="#mission" className="block py-2 text-sm font-medium hover:text-primary">
+              <a href="#mission" className="block py-2 text-sm font-medium text-slate-200 hover:text-white">
                 Mission
               </a>
-              <a href="#vision" className="block py-2 text-sm font-medium hover:text-primary">
+              <a href="#vision" className="block py-2 text-sm font-medium text-slate-200 hover:text-white">
                 Vision
               </a>
-              <a href="#goals" className="block py-2 text-sm font-medium hover:text-primary">
+              <a href="#goals" className="block py-2 text-sm font-medium text-slate-200 hover:text-white">
                 Goals
               </a>
               <div className="flex gap-3 pt-3 border-t">
+                <Link
+                  to="/notifications"
+                  className="group flex items-center justify-center rounded-full p-2 text-slate-200 transition-colors hover:bg-slate-800/60 hover:text-white"
+                  aria-label="View notifications"
+                >
+                  <Bell className="h-5 w-5 transition-colors group-hover:text-white" />
+                </Link>
                 <Link to="/login" className="flex-1">
-                  <Button variant="outline" size="sm" className="w-full">Login</Button>
+                  <Button variant="outline" size="sm" className="w-full border-slate-700 text-white hover:bg-white hover:text-slate-900">
+                    Login
+                  </Button>
                 </Link>
                 <Link to="/signup" className="flex-1">
-                  <Button size="sm" className="w-full rounded-full">Sign Up</Button>
+                  <Button size="sm" className="w-full rounded-full bg-white text-slate-900 hover:bg-slate-900 hover:text-white">Sign Up</Button>
                 </Link>
               </div>
             </div>
@@ -431,12 +448,16 @@ const LandingPage = () => {
             ) : (
               <div className="grid md:grid-cols-3 gap-6">
                 {upcomingTrainings.map((training) => (
-                  <Card key={training.id} className="p-6 hover:shadow-lg transition-shadow border-0 shadow-md">
+                  <Card
+                    key={training.id}
+                    className="interactive-card group relative overflow-hidden p-6 border-0 shadow-md transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                     {training.imageUrl ? (
-                      <img 
-                        src={training.imageUrl} 
+                      <img
+                        src={training.imageUrl}
                         alt={training.title}
-                        className="w-full h-48 object-cover rounded-lg mb-4"
+                        className="w-full h-48 object-cover rounded-lg mb-4 transition-transform duration-500 group-hover:scale-105"
                         onError={(e) => {
                           console.error("Failed to load training image:", training.imageUrl);
                           e.currentTarget.style.display = 'none';
@@ -465,7 +486,7 @@ const LandingPage = () => {
                       Prepare for registration
                     </p>
                     <Button
-                      className="w-full rounded-full"
+                      className="w-full rounded-full transition-transform duration-500 group-hover:translate-y-[-2px]"
                       size="sm"
                       onClick={() => navigate(`/trainings/${training.id}/register`)}
                     >
@@ -498,12 +519,16 @@ const LandingPage = () => {
             ) : (
               <div className="grid md:grid-cols-3 gap-6">
                 {activeTutorials.map((tutorial) => (
-                  <Card key={tutorial.id} className="p-6 hover:shadow-lg transition-shadow border-0 shadow-md">
+                  <Card
+                    key={tutorial.id}
+                    className="interactive-card group relative overflow-hidden p-6 border-0 shadow-md transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-emerald-200/20 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                     {tutorial.imageUrl && (
-                      <img 
-                        src={tutorial.imageUrl} 
+                      <img
+                        src={tutorial.imageUrl}
                         alt={tutorial.title}
-                        className="w-full h-48 object-cover rounded-lg mb-4"
+                        className="w-full h-48 object-cover rounded-lg mb-4 transition-transform duration-500 group-hover:scale-105"
                         onError={(e) => {
                           console.error("Failed to load tutorial image:", tutorial.imageUrl);
                           e.currentTarget.style.display = 'none';
@@ -536,7 +561,7 @@ const LandingPage = () => {
                     </div>
                     <Button
                       variant="outline"
-                      className="w-full rounded-full"
+                      className="w-full rounded-full transition-transform duration-500 group-hover:translate-y-[-2px]"
                       size="sm"
                       onClick={() => navigate(`/tutorials/${tutorial.id}/register`)}
                     >
@@ -569,13 +594,17 @@ const LandingPage = () => {
             ) : (
               <div className="grid md:grid-cols-3 gap-6">
                 {latestLibraryUploads.map((book) => (
-                  <Card key={book.id} className="p-6 hover:shadow-lg transition-shadow border-0 shadow-md">
+                  <Card
+                    key={book.id}
+                    className="interactive-card group relative overflow-hidden p-6 border-0 shadow-md transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-blue-200/15 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                     <div className="flex items-start gap-4 mb-4">
                       {book.imageUrl ? (
-                        <img 
-                          src={book.imageUrl} 
+                        <img
+                          src={book.imageUrl}
                           alt={book.title}
-                          className="w-16 h-24 object-cover rounded-lg flex-shrink-0"
+                          className="w-16 h-24 object-cover rounded-lg flex-shrink-0 transition-transform duration-500 group-hover:scale-105"
                           onError={(e) => {
                             console.error("Failed to load image:", book.imageUrl);
                             e.currentTarget.style.display = 'none';

@@ -24,6 +24,7 @@ import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import TrainingRegistration from "./pages/TrainingRegistration";
 import TutorialRegistration from "./pages/TutorialRegistration";
+import Notifications from "./pages/Notifications";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/welcome" element={<Welcome />} />
             <Route path="/role-select" element={<RoleSelect />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
+            <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             
             <Route path="/library-dashboard" element={<ProtectedRoute allowedRoles={["librarian", "super_admin"]}><LibraryDashboard /></ProtectedRoute>} />
             <Route path="/tutor-dashboard" element={<ProtectedRoute allowedRoles={["tutor", "super_admin"]}><TutorDashboard /></ProtectedRoute>} />
