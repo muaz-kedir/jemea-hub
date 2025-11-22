@@ -13,7 +13,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import Welcome from "./pages/Welcome";
 import RoleSelect from "./pages/RoleSelect";
 import Profile from "./pages/Profile";
-import LibraryDashboard from "./pages/LibraryDashboard";
+import DigitalLibrary from "./pages/DigitalLibrary";
 import TutorDashboard from "./pages/TutorDashboard";
 import TrainerDashboard from "./pages/TrainerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -48,7 +48,7 @@ const App = () => (
             <Route path="/unauthorized" element={<Unauthorized />} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             
-            <Route path="/library-dashboard" element={<ProtectedRoute allowedRoles={["librarian", "super_admin"]}><LibraryDashboard /></ProtectedRoute>} />
+            <Route path="/digital-library/*" element={<DigitalLibrary />} />
             <Route path="/tutor-dashboard" element={<ProtectedRoute allowedRoles={["tutor", "super_admin"]}><TutorDashboard /></ProtectedRoute>} />
             <Route path="/trainer-dashboard" element={<ProtectedRoute allowedRoles={["trainer", "super_admin"]}><TrainerDashboard /></ProtectedRoute>} />
             <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={["super_admin"]}><AdminDashboard /></ProtectedRoute>} />

@@ -10,7 +10,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { icon: Home, label: "Home", path: "/landing" },
-  { icon: Library, label: "Library", path: "/library-dashboard" },
+  { icon: Library, label: "Digital Library", path: "/digital-library" },
   { icon: GraduationCap, label: "Tutorial", path: "/tutor-dashboard" },
   { icon: Award, label: "Training", path: "/trainer-dashboard" },
   { icon: User, label: "Profile", path: "/profile" },

@@ -413,11 +413,11 @@ const LandingPage = () => {
 
   const sectors = [
     {
-      name: "Library",
+      name: "Digital Library",
       icon: BookOpen,
-      description: "Access thousands of books and resources",
+      description: "Browse curated academic resources by semester",
       color: "bg-blue-500",
-      link: "/library-dashboard"
+      link: "/digital-library"
     },
     {
       name: "Tutoring",
