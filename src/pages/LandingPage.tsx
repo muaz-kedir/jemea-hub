@@ -24,6 +24,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
 import { HumsjLogo } from "@/components/HumsjLogo";
 import { db } from "@/lib/firebase";
@@ -448,16 +449,12 @@ const LandingPage = () => {
             ) : (
               <div className="grid md:grid-cols-3 gap-6">
                 {upcomingTrainings.map((training) => (
-                  <Card
-                    key={training.id}
-                    className="interactive-card group relative overflow-hidden p-6 border-0 shadow-md transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <Card key={training.id} className="p-6 hover:shadow-lg transition-shadow border-0 shadow-md">
                     {training.imageUrl ? (
                       <img
                         src={training.imageUrl}
                         alt={training.title}
-                        className="w-full h-48 object-cover rounded-lg mb-4 transition-transform duration-500 group-hover:scale-105"
+                        className="w-full h-48 object-cover rounded-lg mb-4"
                         onError={(e) => {
                           console.error("Failed to load training image:", training.imageUrl);
                           e.currentTarget.style.display = 'none';
@@ -486,7 +483,7 @@ const LandingPage = () => {
                       Prepare for registration
                     </p>
                     <Button
-                      className="w-full rounded-full transition-transform duration-500 group-hover:translate-y-[-2px]"
+                      className="w-full rounded-full"
                       size="sm"
                       onClick={() => navigate(`/trainings/${training.id}/register`)}
                     >
@@ -519,16 +516,12 @@ const LandingPage = () => {
             ) : (
               <div className="grid md:grid-cols-3 gap-6">
                 {activeTutorials.map((tutorial) => (
-                  <Card
-                    key={tutorial.id}
-                    className="interactive-card group relative overflow-hidden p-6 border-0 shadow-md transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-emerald-200/20 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <Card key={tutorial.id} className="p-6 hover:shadow-lg transition-shadow border-0 shadow-md">
                     {tutorial.imageUrl && (
                       <img
                         src={tutorial.imageUrl}
                         alt={tutorial.title}
-                        className="w-full h-48 object-cover rounded-lg mb-4 transition-transform duration-500 group-hover:scale-105"
+                        className="w-full h-48 object-cover rounded-lg mb-4"
                         onError={(e) => {
                           console.error("Failed to load tutorial image:", tutorial.imageUrl);
                           e.currentTarget.style.display = 'none';
@@ -561,7 +554,7 @@ const LandingPage = () => {
                     </div>
                     <Button
                       variant="outline"
-                      className="w-full rounded-full transition-transform duration-500 group-hover:translate-y-[-2px]"
+                      className="w-full rounded-full"
                       size="sm"
                       onClick={() => navigate(`/tutorials/${tutorial.id}/register`)}
                     >
@@ -596,15 +589,14 @@ const LandingPage = () => {
                 {latestLibraryUploads.map((book) => (
                   <Card
                     key={book.id}
-                    className="interactive-card group relative overflow-hidden p-6 border-0 shadow-md transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl"
+                    className="p-6 border-0 shadow-md"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-blue-200/15 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                     <div className="flex items-start gap-4 mb-4">
                       {book.imageUrl ? (
                         <img
                           src={book.imageUrl}
                           alt={book.title}
-                          className="w-16 h-24 object-cover rounded-lg flex-shrink-0 transition-transform duration-500 group-hover:scale-105"
+                          className="w-16 h-24 object-cover rounded-lg flex-shrink-0"
                           onError={(e) => {
                             console.error("Failed to load image:", book.imageUrl);
                             e.currentTarget.style.display = 'none';
