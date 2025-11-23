@@ -20,6 +20,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import LibraryAdminDashboard from "./pages/LibraryAdminDashboard";
 import TutorialAdminDashboard from "./pages/TutorialAdminDashboard";
 import TrainingAdminDashboard from "./pages/TrainingAdminDashboard";
+import ResourceAdminDashboard from "./pages/ResourceAdminDashboard";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import TrainingRegistration from "./pages/TrainingRegistration";
@@ -57,6 +58,7 @@ const App = () => (
             <Route path="/admin/library" element={<ProtectedRoute allowedRoles={["super_admin"]}><LibraryAdminDashboard /></ProtectedRoute>} />
             <Route path="/admin/tutorial" element={<ProtectedRoute allowedRoles={["super_admin"]}><TutorialAdminDashboard /></ProtectedRoute>} />
             <Route path="/admin/training" element={<ProtectedRoute allowedRoles={["super_admin"]}><TrainingAdminDashboard /></ProtectedRoute>} />
+            <Route path="/admin/resources" element={<ProtectedRoute allowedRoles={["super_admin"]}><ResourceAdminDashboard /></ProtectedRoute>} />
             
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             

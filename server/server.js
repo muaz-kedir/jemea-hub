@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { verifyCloudinaryConfig } from './config/cloudinary.js';
 import uploadRoute from './routes/uploadRoute.js';
 import notificationRoute from './routes/notificationRoute.js';
+import resourceRoute from './routes/resourceRoute.js';
 
 // Load environment variables
 dotenv.config();
@@ -70,6 +71,7 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api', uploadRoute);
 app.use('/api', notificationRoute);
+app.use('/api', resourceRoute);
 
 // 404 handler
 app.use((req, res) => {

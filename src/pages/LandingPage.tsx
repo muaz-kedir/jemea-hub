@@ -326,7 +326,7 @@ const LandingPage = () => {
       }));
       setActiveTutorials(tutorialsData);
 
-      // Load library resources
+      // Load library resources from both old and new collections
       const libraryQuery = query(
         collection(db, "library_resources"),
         orderBy("addedAt", "desc"),
@@ -337,11 +337,32 @@ const LandingPage = () => {
         id: doc.id,
         ...(doc.data() as DocumentData),
       }));
-      console.log("Library resources loaded:", libraryData);
-      libraryData.forEach(item => {
-        console.log(`Resource: ${item.title}, imageUrl: ${item.imageUrl}`);
-      });
-      setLatestLibraryUploads(libraryData);
+
+      // Also load classified resources with placement="landing"
+      const classifiedQuery = query(
+        collection(db, "classified_resources"),
+        orderBy("createdAt", "desc"),
+        limit(3)
+      );
+      const classifiedSnapshot = await getDocs(classifiedQuery);
+      const classifiedData = classifiedSnapshot.docs
+        .map((doc): FirestoreRecord => ({
+          id: doc.id,
+          ...(doc.data() as DocumentData),
+        }))
+        .filter((item) => item.placement === "landing");
+
+      // Combine and sort by date
+      const allResources = [...libraryData, ...classifiedData]
+        .sort((a, b) => {
+          const dateA = a.createdAt?.toDate?.() || a.addedAt?.toDate?.() || new Date(0);
+          const dateB = b.createdAt?.toDate?.() || b.addedAt?.toDate?.() || new Date(0);
+          return dateB.getTime() - dateA.getTime();
+        })
+        .slice(0, 3);
+
+      console.log("Library resources loaded:", allResources);
+      setLatestLibraryUploads(allResources);
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -849,56 +870,94 @@ const LandingPage = () => {
             ) : (
               <div ref={sliderRefs.library} className="overflow-x-auto">
                 <div className="flex gap-6 snap-x snap-mandatory pb-4">
-                  {latestLibraryUploads.map((book) => (
-                    <SpotlightCard
-                      key={book.id}
-                      className="p-6 w-[340px] sm:w-[360px] flex-shrink-0 bg-slate-900/70"
-                    >
-                      <div className="flex items-start gap-4 mb-4">
-                        {book.imageUrl ? (
-                          <img
-                            src={book.imageUrl}
-                            alt={book.title}
-                            className="w-16 h-24 object-cover rounded-lg flex-shrink-0"
-                            onError={(e) => {
-                              console.error("Failed to load image:", book.imageUrl);
-                              e.currentTarget.style.display = 'none';
-                            }}
-                            onLoad={() => console.log("Image loaded successfully:", book.imageUrl)}
-                          />
-                        ) : (
-                          <div className="w-16 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <BookOpen className="w-8 h-8 text-white" />
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-bold mb-1 line-clamp-2">{book.title}</h3>
-                          <p className="text-sm text-muted-foreground">{book.author}</p>
-                        </div>
-                      </div>
-                      <div className="space-y-2 text-sm mb-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Category:</span>
-                          <span className="font-medium">{book.category}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Copies:</span>
-                          <span className="font-medium">{book.available || 0}/{book.copies || 0}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Added {getTimeAgo(book.addedAt)}
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        className="w-full rounded-full"
-                        size="sm"
-                        onClick={() => setSelectedLibraryResource(book)}
+                  {latestLibraryUploads.map((book) => {
+                    // Check if this is a new classified resource or old library resource
+                    const isClassifiedResource = book.placement !== undefined;
+                    const resourceUrl = isClassifiedResource ? book.file?.url : book.imageUrl;
+                    const resourceDate = isClassifiedResource ? book.createdAt : book.addedAt;
+                    
+                    return (
+                      <SpotlightCard
+                        key={book.id}
+                        className="p-6 w-[340px] sm:w-[360px] flex-shrink-0 bg-slate-900/70"
                       >
-                        View Details
-                      </Button>
-                    </SpotlightCard>
-                  ))}
+                        <div className="flex items-start gap-4 mb-4">
+                          {resourceUrl ? (
+                            <img
+                              src={resourceUrl}
+                              alt={book.title}
+                              className="w-16 h-24 object-cover rounded-lg flex-shrink-0"
+                              onError={(e) => {
+                                console.error("Failed to load image:", resourceUrl);
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-16 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <BookOpen className="w-8 h-8 text-white" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold mb-1 line-clamp-2">{book.title}</h3>
+                            {isClassifiedResource ? (
+                              <p className="text-sm text-muted-foreground line-clamp-1">
+                                {book.description || "Resource"}
+                              </p>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">{book.author}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="space-y-2 text-sm mb-4">
+                          {!isClassifiedResource && (
+                            <>
+                              <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">Category:</span>
+                                <span className="font-medium">{book.category}</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">Copies:</span>
+                                <span className="font-medium">{book.available || 0}/{book.copies || 0}</span>
+                              </div>
+                            </>
+                          )}
+                          {isClassifiedResource && book.tags && book.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {book.tags.slice(0, 3).map((tag: string, i: number) => (
+                                <span key={i} className="text-xs bg-primary/20 text-primary px-2 py-1 rounded">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <div className="text-xs text-muted-foreground">
+                            Added {getTimeAgo(resourceDate)}
+                          </div>
+                        </div>
+                        {isClassifiedResource ? (
+                          <Button
+                            variant="outline"
+                            className="w-full rounded-full"
+                            size="sm"
+                            asChild
+                          >
+                            <a href={book.file?.url} target="_blank" rel="noopener noreferrer">
+                              Download Resource
+                            </a>
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            className="w-full rounded-full"
+                            size="sm"
+                            onClick={() => setSelectedLibraryResource(book)}
+                          >
+                            View Details
+                          </Button>
+                        )}
+                      </SpotlightCard>
+                    );
+                  })}
                 </div>
               </div>
             )}
