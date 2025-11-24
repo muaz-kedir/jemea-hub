@@ -38,8 +38,8 @@ const parseResource = (raw: any): ClassifiedResource => {
     placement: raw.placement,
     college: raw.college || null,
     department: raw.department || null,
-    year: raw.year || null,
     semester: raw.semester || null,
+    course: raw.course || null,
     tags: Array.isArray(raw.tags) ? raw.tags : [],
     postedBy: raw.postedBy || null,
     file: raw.file,
@@ -67,8 +67,8 @@ export interface CreateResourcePayload {
   placement: 'landing' | 'academic';
   college?: string;
   department?: string;
-  year?: string;
   semester?: string;
+  course?: string;
   tags?: string[];
   file: File;
   postedBy?: string | null;
@@ -86,8 +86,8 @@ export const createResource = async (payload: CreateResourcePayload): Promise<Cl
   if (payload.placement === 'academic') {
     if (payload.college) formData.append('college', payload.college);
     if (payload.department) formData.append('department', payload.department);
-    if (payload.year) formData.append('year', payload.year);
     if (payload.semester) formData.append('semester', payload.semester);
+    if (payload.course) formData.append('course', payload.course);
   }
 
   if (payload.tags?.length) {

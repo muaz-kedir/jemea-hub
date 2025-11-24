@@ -17,7 +17,8 @@ import {
   Search,
   ArrowLeft,
   FileText,
-  Calendar
+  Calendar,
+  GraduationCap
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { db } from "@/lib/firebase";
@@ -31,6 +32,9 @@ import {
   Timestamp 
 } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ResourceAdminPanel } from "@/components/ResourceAdminPanel";
+import { CourseManagement } from "@/components/CourseManagement";
 
 interface LibraryResource {
   id: string;
@@ -61,6 +65,8 @@ const LibraryAdminDashboard = () => {
   const [isAddingResource, setIsAddingResource] = useState(false);
   const [editingResource, setEditingResource] = useState<LibraryResource | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<"library" | "academic" | "courses">("library");
+  const [coursesUpdated, setCoursesUpdated] = useState(0); // Trigger re-renders when courses change
   const [formData, setFormData] = useState({
     title: "",
     author: "",
@@ -155,6 +161,13 @@ const LibraryAdminDashboard = () => {
       const parsedAvailable = parseInt(formData.available, 10);
       const parsedPublishedYear = formData.publishedYear ? parseInt(formData.publishedYear, 10) : undefined;
 
+      // Upload image first if selected
+      if (imageFile) {
+        console.log("Starting image upload...");
+        imageUrl = await uploadImage(imageFile);
+        console.log("Image uploaded successfully! URL:", imageUrl);
+      }
+
       const resourceData = sanitizeData({
         title: formData.title,
         author: formData.author,
@@ -165,15 +178,8 @@ const LibraryAdminDashboard = () => {
         copies: Number.isNaN(parsedCopies) ? undefined : parsedCopies,
         available: Number.isNaN(parsedAvailable) ? undefined : parsedAvailable,
         addedAt: Timestamp.now(),
-      });
-
-      // Upload image first if selected
-      if (imageFile) {
-        console.log("Starting image upload...");
-        imageUrl = await uploadImage(imageFile);
-        console.log("Image uploaded successfully! URL:", imageUrl);
-        resourceData.imageUrl = imageUrl;
-      }
+        imageUrl: imageUrl || undefined,
+      } as any);
 
       console.log("Saving to Firestore with data:", resourceData);
 
@@ -293,14 +299,29 @@ const LibraryAdminDashboard = () => {
               <p className="text-sm text-muted-foreground">Manage library resources and books</p>
             </div>
           </div>
-          <Button onClick={() => setIsAddingResource(true)} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Add Resource
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsAddingResource(true)} className="gap-2">
+              <Plus className="w-4 h-4" />
+              Add Resource
+            </Button>
+            <Button onClick={() => setActiveTab("academic")} variant="outline" className="gap-2">
+              <GraduationCap className="w-4 h-4" />
+              Add Academic Resource
+            </Button>
+          </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "library" | "academic" | "courses")}>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="library">Library Resources</TabsTrigger>
+            <TabsTrigger value="academic">Academic Resources</TabsTrigger>
+            <TabsTrigger value="courses">Manage Courses</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="library" className="space-y-6">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 gap-4">
           <Card className="p-4 border-0 shadow-md">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
@@ -554,7 +575,21 @@ const LibraryAdminDashboard = () => {
               </p>
             </Card>
           )}
-        </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="academic" className="space-y-6">
+            <ResourceAdminPanel
+              title="Academic Resource Management"
+              description="Post and manage academic resources for the digital library."
+              coursesUpdated={coursesUpdated}
+            />
+          </TabsContent>
+
+          <TabsContent value="courses" className="space-y-6">
+            <CourseManagement onCoursesUpdate={() => setCoursesUpdated(prev => prev + 1)} />
+          </TabsContent>
+        </Tabs>
       </div>
 
       <BottomNav />
