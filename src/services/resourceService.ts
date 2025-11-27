@@ -2,6 +2,12 @@ import type { ClassifiedResource, ClassifiedResourceFilters } from '@/types/reso
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+export interface Flashcard {
+  id: string;
+  front: string;
+  back: string;
+}
+
 const toQueryString = (filters: ClassifiedResourceFilters = {}) => {
   const params = new URLSearchParams();
 
@@ -72,6 +78,105 @@ export const getResourceById = async (id: string): Promise<ClassifiedResource> =
 
   const data = await response.json();
   return parseResource(data.data);
+};
+
+export interface ResourceAIData {
+  resourceId: string;
+  placement: string | null;
+  college: string | null;
+  department: string | null;
+  year: string | null;
+  semester: string | null;
+  course: string | null;
+  summaryShort?: string;
+  summaryLong?: string;
+  flashcards?: Flashcard[];
+  mindmapJson?: unknown;
+  mindmapSvgUrl?: string | null;
+  quiz?: unknown;
+  audioUrl?: string | null;
+  audioStatus?: string | null;
+  videoUrl?: string | null;
+  videoStatus?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+const parseTimestamp = (timestamp: any): string | null => {
+  if (!timestamp) return null;
+
+  if (typeof timestamp === 'string') return timestamp;
+
+  if (timestamp.seconds) {
+    return new Date(timestamp.seconds * 1000).toISOString();
+  }
+
+  if (timestamp._seconds) {
+    return new Date(timestamp._seconds * 1000).toISOString();
+  }
+
+  return null;
+};
+
+export const getResourceAIData = async (id: string): Promise<ResourceAIData | null> => {
+  const response = await fetch(`${API_URL}/api/resources/${id}/ai`);
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to fetch AI data');
+  }
+
+  const data = await response.json();
+  if (!data?.data) return null;
+
+  return {
+    ...data.data,
+    resourceId: data.data.resourceId ?? id,
+    createdAt: parseTimestamp(data.data.createdAt),
+    updatedAt: parseTimestamp(data.data.updatedAt),
+    flashcards: Array.isArray(data.data.flashcards)
+      ? (data.data.flashcards as Array<{ id?: string; front?: string; back?: string }> )
+          .map((card, index) => {
+            const front = card?.front?.trim?.() ?? '';
+            const back = card?.back?.trim?.() ?? '';
+            if (!front || !back) return null;
+            return {
+              id: card?.id ? String(card.id) : `fc-${index + 1}`,
+              front,
+              back,
+            } as Flashcard;
+          })
+          .filter(Boolean) as Flashcard[]
+      : undefined,
+  } as ResourceAIData;
+};
+
+export const generateResourceSummary = async (id: string) => {
+  const response = await fetch(`${API_URL}/api/resources/${id}/ai/summary`, {
+    method: 'POST',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to generate summary');
+  }
+
+  const data = await response.json();
+  return data.data as { summaryShort: string; summaryLong: string };
+};
+
+export const generateResourceFlashcards = async (id: string) => {
+  const response = await fetch(`${API_URL}/api/resources/${id}/ai/flashcards`, {
+    method: 'POST',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to generate flashcards');
+  }
+
+  const data = await response.json();
+  return (data.data?.flashcards ?? []) as Flashcard[];
 };
 
 export interface CreateResourcePayload {

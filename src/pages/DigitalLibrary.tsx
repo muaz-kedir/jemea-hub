@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
@@ -16,6 +16,8 @@ import {
   ZoomOut,
   ChevronLeft,
   ChevronRight,
+  Sparkles,
+  Layers,
 } from "lucide-react";
 import {
   Link,
@@ -25,7 +27,16 @@ import {
   useRoutes,
   useNavigate,
 } from "react-router-dom";
-import { fetchResources, getResourceById } from "@/services/resourceService";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  fetchResources,
+  getResourceById,
+  getResourceAIData,
+  generateResourceSummary,
+  generateResourceFlashcards,
+  type ResourceAIData,
+  type Flashcard,
+} from "@/services/resourceService";
 import type { ClassifiedResource } from "@/types/resources";
 import { useAcademicStructure } from "@/context/AcademicStructureContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -702,6 +713,15 @@ const ResourceViewer = () => {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [zoom, setZoom] = useState(1.2);
+  const [aiData, setAIData] = useState<ResourceAIData | null>(null);
+  const [aiLoadError, setAILoadError] = useState<string | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [flashcardsLoading, setFlashcardsLoading] = useState(false);
+  const [flashcardsError, setFlashcardsError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("viewer");
+  const [flashcardIndex, setFlashcardIndex] = useState(0);
+  const [showFlashcardBack, setShowFlashcardBack] = useState(false);
 
   useEffect(() => {
     const loadResource = async () => {
@@ -722,6 +742,173 @@ const ResourceViewer = () => {
 
     loadResource();
   }, [resourceId]);
+
+  const loadAIData = useCallback(async () => {
+    if (!resourceId) return;
+
+    try {
+      setSummaryLoading(true);
+      setSummaryError(null);
+      const data = await getResourceAIData(resourceId);
+      setAIData(data);
+    } catch (err) {
+      console.error("Failed to load AI data:", err);
+      setAILoadError(err instanceof Error ? err.message : "Failed to load AI data");
+    } finally {
+      setSummaryLoading(false);
+      setFlashcardsLoading(false);
+    }
+  }, [resourceId]);
+
+  useEffect(() => {
+    loadAIData();
+  }, [loadAIData]);
+
+  const handleGenerateSummary = useCallback(async () => {
+    if (!resourceId) return;
+
+    try {
+      setSummaryLoading(true);
+      setSummaryError(null);
+      const summary = await generateResourceSummary(resourceId);
+      setAIData((prev) => ({
+        ...(prev || {
+          resourceId,
+          placement: resource?.placement ?? null,
+          college: resource?.college ?? null,
+          department: resource?.department ?? null,
+          year: resource?.year ?? null,
+          semester: resource?.semester ?? null,
+          course: resource?.course ?? null,
+        }),
+        summaryShort: summary.summaryShort,
+        summaryLong: summary.summaryLong,
+        updatedAt: new Date().toISOString(),
+      }));
+    } catch (err) {
+      console.error("Failed to generate summary:", err);
+      setSummaryError(err instanceof Error ? err.message : "Failed to generate summary");
+    } finally {
+      setSummaryLoading(false);
+    }
+  }, [resourceId, resource]);
+
+  const hasSummary = !!aiData?.summaryShort || !!aiData?.summaryLong;
+
+  const flashcards = aiData?.flashcards ?? [];
+
+  useEffect(() => {
+    setFlashcardIndex(0);
+    setShowFlashcardBack(false);
+  }, [flashcards.length]);
+
+  const handleGenerateFlashcards = useCallback(async () => {
+    if (!resourceId) return;
+
+    try {
+      setFlashcardsLoading(true);
+      setFlashcardsError(null);
+      const generated = await generateResourceFlashcards(resourceId);
+      setAIData((prev) => ({
+        ...(prev || {
+          resourceId,
+          placement: resource?.placement ?? null,
+          college: resource?.college ?? null,
+          department: resource?.department ?? null,
+          year: resource?.year ?? null,
+          semester: resource?.semester ?? null,
+          course: resource?.course ?? null,
+        }),
+        flashcards: generated,
+        updatedAt: new Date().toISOString(),
+      }));
+      setFlashcardIndex(0);
+      setShowFlashcardBack(false);
+    } catch (err) {
+      console.error("Failed to generate flashcards:", err);
+      setFlashcardsError(err instanceof Error ? err.message : "Failed to generate flashcards");
+    } finally {
+      setFlashcardsLoading(false);
+    }
+  }, [resourceId, resource]);
+
+  const summaryContent = useMemo(() => {
+    if (!hasSummary) return null;
+
+    return (
+      <div className="space-y-6">
+        {aiData?.summaryShort && (
+          <Card className="p-4 border-0 bg-primary/10">
+            <h3 className="text-sm font-semibold text-primary uppercase tracking-wide">Quick Summary</h3>
+            <p className="text-sm mt-2 text-primary/80 leading-relaxed">{aiData.summaryShort}</p>
+          </Card>
+        )}
+
+        {aiData?.summaryLong && (
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold">Detailed Summary</h3>
+            <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-line">
+              {aiData.summaryLong}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }, [aiData, hasSummary]);
+
+  const flashcardContent = useMemo(() => {
+    if (!flashcards.length) return null;
+
+    const current = flashcards[Math.min(flashcardIndex, flashcards.length - 1)];
+    if (!current) return null;
+
+    return (
+      <div className="space-y-6">
+        <Card className="p-6 border border-primary/20 bg-background shadow-sm">
+          <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
+            <span>Card {flashcardIndex + 1} of {flashcards.length}</span>
+            <span>{showFlashcardBack ? "Answer" : "Prompt"}</span>
+          </div>
+          <div className="min-h-[120px] flex items-center justify-center text-center">
+            <p className="text-lg font-medium leading-relaxed whitespace-pre-wrap">
+              {showFlashcardBack ? current.back : current.front}
+            </p>
+          </div>
+        </Card>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setShowFlashcardBack((prev) => !prev)}
+          >
+            {showFlashcardBack ? "Hide Answer" : "Show Answer"}
+          </Button>
+          <div className="ml-auto flex gap-2">
+            <Button
+              variant="outline"
+              disabled={flashcardIndex === 0}
+              onClick={() => {
+                setFlashcardIndex((prev) => Math.max(prev - 1, 0));
+                setShowFlashcardBack(false);
+              }}
+            >
+              <ChevronLeft className="w-4 h-4" /> Prev
+            </Button>
+            <Button
+              variant="outline"
+              disabled={flashcardIndex >= flashcards.length - 1}
+              onClick={() => {
+                setFlashcardIndex((prev) => Math.min(prev + 1, flashcards.length - 1));
+                setShowFlashcardBack(false);
+              }}
+            >
+              Next <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }, [flashcards, flashcardIndex, showFlashcardBack]);
 
   const isPdf =
     resource?.file?.mimeType?.toLowerCase?.().includes("pdf") ||
@@ -817,103 +1004,238 @@ const ResourceViewer = () => {
         )}
       </div>
 
-      {!isPdf && (
-        <Card className="p-8 text-center border-0 shadow-lg bg-secondary/20 space-y-4">
-          <p className="text-muted-foreground">
-            This resource is not a PDF or cannot be rendered inline.
-          </p>
-          <Button asChild>
-            <a
-              href={resource.file.url}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              Open in new tab
-            </a>
-          </Button>
-        </Card>
-      )}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="w-full justify-start overflow-x-auto">
+          <TabsTrigger value="viewer">Document</TabsTrigger>
+          <TabsTrigger value="summary" className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4" />
+            AI Summary
+          </TabsTrigger>
+          <TabsTrigger value="flashcards" className="flex items-center gap-2">
+            <Layers className="w-4 h-4" />
+            Flashcards
+          </TabsTrigger>
+        </TabsList>
 
-      {isPdf && (
-        <Card className="border-0 shadow-lg bg-secondary/20 flex flex-col h-[70vh]">
-          <div className="flex items-center justify-between px-4 py-2 border-b gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={handleZoomOut}
-                className="h-8 w-8"
-              >
-                <ZoomOut className="w-4 h-4" />
+        <TabsContent value="viewer" className="mt-0">
+          {!isPdf && (
+            <Card className="p-8 text-center border-0 shadow-lg bg-secondary/20 space-y-4">
+              <p className="text-muted-foreground">
+                This resource is not a PDF or cannot be rendered inline.
+              </p>
+              <Button asChild>
+                <a
+                  href={resource.file.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Open in new tab
+                </a>
               </Button>
-              <span className="text-xs text-muted-foreground w-16 text-center">
-                {Math.round(zoom * 100)}%
-              </span>
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={handleZoomIn}
-                className="h-8 w-8"
-              >
-                <ZoomIn className="w-4 h-4" />
-              </Button>
-            </div>
+            </Card>
+          )}
 
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={handlePrevPage}
-                disabled={pageNumber <= 1}
-                className="h-8 w-8"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <span>
-                Page {pageNumber} {numPages ? `of ${numPages}` : ""}
-              </span>
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={handleNextPage}
-                disabled={numPages !== null && pageNumber >= numPages}
-                className="h-8 w-8"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-auto bg-muted/40 flex items-center justify-center">
-            <Document
-              file={resource.file.url}
-              onLoadSuccess={onDocumentLoadSuccess}
-              onLoadError={(err) => {
-                console.error("Failed to render PDF:", err);
-                setError(
-                  err instanceof Error
-                    ? err.message
-                    : "Failed to render PDF document."
-                );
-              }}
-              loading={
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          {isPdf && (
+            <Card className="border-0 shadow-lg bg-secondary/20 flex flex-col h-[70vh]">
+              <div className="flex items-center justify-between px-4 py-2 border-b gap-4 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={handleZoomOut}
+                    className="h-8 w-8"
+                  >
+                    <ZoomOut className="w-4 h-4" />
+                  </Button>
+                  <span className="text-xs text-muted-foreground w-16 text-center">
+                    {Math.round(zoom * 100)}%
+                  </span>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={handleZoomIn}
+                    className="h-8 w-8"
+                  >
+                    <ZoomIn className="w-4 h-4" />
+                  </Button>
                 </div>
-              }
-              className="flex items-center justify-center"
-            >
-              <Page
-                pageNumber={pageNumber}
-                scale={zoom}
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
-              />
-            </Document>
-          </div>
-        </Card>
-      )}
+
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={handlePrevPage}
+                    disabled={pageNumber <= 1}
+                    className="h-8 w-8"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <span>
+                    Page {pageNumber} {numPages ? `of ${numPages}` : ""}
+                  </span>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={handleNextPage}
+                    disabled={numPages !== null && pageNumber >= numPages}
+                    className="h-8 w-8"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-auto bg-muted/40 flex items-center justify-center">
+                <Document
+                  file={resource.file.url}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  onLoadError={(err) => {
+                    console.error("Failed to render PDF:", err);
+                    setError(
+                      err instanceof Error
+                        ? err.message
+                        : "Failed to render PDF document."
+                    );
+                  }}
+                  loading={
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                    </div>
+                  }
+                  className="flex items-center justify-center"
+                >
+                  <Page
+                    pageNumber={pageNumber}
+                    scale={zoom}
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                  />
+                </Document>
+              </div>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="summary" className="mt-0">
+          <Card className="p-6 border-0 shadow-lg bg-secondary/20 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  AI Summary
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Gemini generates a concise and detailed overview of this resource.
+                </p>
+              </div>
+              <Button
+                onClick={handleGenerateSummary}
+                disabled={summaryLoading}
+                className="flex items-center gap-2"
+              >
+                {summaryLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Generating...
+                  </>
+                ) : hasSummary ? (
+                  <>
+                    <Sparkles className="w-4 h-4" /> Regenerate Summary
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" /> Generate Summary
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {summaryError && (
+              <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">
+                {summaryError}
+              </div>
+            )}
+
+            {summaryLoading && !hasSummary && (
+              <div className="flex items-center gap-3 text-muted-foreground text-sm">
+                <Loader2 className="w-4 h-4 animate-spin" /> Preparing summary...
+              </div>
+            )}
+
+            {!hasSummary && !summaryLoading && !summaryError && (
+              <div className="text-sm text-muted-foreground">
+                No summary generated yet. Click "Generate Summary" to create one.
+              </div>
+            )}
+
+            {summaryContent}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="flashcards" className="mt-0">
+          <Card className="p-6 border-0 shadow-lg bg-secondary/20 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-primary" />
+                  Flashcards
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Practice spaced-repetition cards generated from this resource.
+                </p>
+              </div>
+              <Button
+                onClick={handleGenerateFlashcards}
+                disabled={flashcardsLoading}
+                className="flex items-center gap-2"
+              >
+                {flashcardsLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Generating...
+                  </>
+                ) : flashcards.length ? (
+                  <>
+                    <Layers className="w-4 h-4" /> Regenerate
+                  </>
+                ) : (
+                  <>
+                    <Layers className="w-4 h-4" /> Generate
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {flashcardsError && (
+              <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">
+                {flashcardsError}
+              </div>
+            )}
+
+            {flashcardsLoading && !flashcards.length && (
+              <div className="flex items-center gap-3 text-muted-foreground text-sm">
+                <Loader2 className="w-4 h-4 animate-spin" /> Building flashcards...
+              </div>
+            )}
+
+            {!flashcards.length && !flashcardsLoading && !flashcardsError && (
+              <div className="text-sm text-muted-foreground">
+                No flashcards yet. Click "Generate" to create a deck for this resource.
+              </div>
+            )}
+
+            {flashcardContent}
+
+            {flashcards.length > 0 && (
+              <div className="flex justify-end">
+                <Button variant="outline" disabled>
+                  Download deck (coming soon)
+                </Button>
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+      </Tabs>
+
     </div>
   );
 };

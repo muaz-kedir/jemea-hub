@@ -5,14 +5,13 @@ import { verifyCloudinaryConfig } from './config/cloudinary.js';
 import uploadRoute from './routes/uploadRoute.js';
 import notificationRoute from './routes/notificationRoute.js';
 import resourceRoute from './routes/resourceRoute.js';
-
+import aiRoute from './routes/aiRoute.js';
 // Load environment variables
 dotenv.config();
 
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 5000;
-
 // CORS configuration
 const defaultOrigins = [
   process.env.FRONTEND_URL,
@@ -72,6 +71,7 @@ app.get('/health', (req, res) => {
 app.use('/api', uploadRoute);
 app.use('/api', notificationRoute);
 app.use('/api', resourceRoute);
+app.use('/api', aiRoute);
 
 // 404 handler
 app.use((req, res) => {
