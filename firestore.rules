@@ -37,7 +37,7 @@ service cloud.firestore {
     
     // Training programs collection
     match /trainings/{trainingId} {
-      allow read: if request.auth != null; // All authenticated users can read
+      allow read: if true; // Public read so landing page can show upcoming trainings
       allow create, update, delete: if request.auth != null; // TEMPORARY: Allow all authenticated users
 
       // Training registrations subcollection
@@ -50,7 +50,7 @@ service cloud.firestore {
     
     // Tutorial sessions collection
     match /tutorial_sessions/{sessionId} {
-      allow read: if request.auth != null; // All authenticated users can read
+      allow read: if true; // Public read so landing page can show active tutorials
       allow create, update, delete: if request.auth != null; // TEMPORARY: Allow all authenticated users
     }
 
@@ -64,8 +64,16 @@ service cloud.firestore {
     
     // Library resources collection
     match /library_resources/{resourceId} {
-      allow read: if request.auth != null; // All authenticated users can read
+      allow read: if true; // Public read so landing page can show latest library uploads
       allow create, update, delete: if request.auth != null; // TEMPORARY: Allow all authenticated users
+    }
+
+    // Classified resources collection (landing + academic files managed via backend)
+    match /classified_resources/{resourceId} {
+      // Public read access so landing page can show latest classified uploads
+      allow read: if true;
+      // Prevent direct writes from clients; resources are created via the backend (Admin SDK)
+      allow create, update, delete: if false;
     }
     
     // Default deny all other collections until specific rules are added

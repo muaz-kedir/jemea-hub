@@ -5,18 +5,38 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { BookOpen, ArrowLeft, FileText, Download, Loader2, FolderOpen } from "lucide-react";
+import {
+  BookOpen,
+  ArrowLeft,
+  FileText,
+  Download,
+  Loader2,
+  FolderOpen,
+  ZoomIn,
+  ZoomOut,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import {
   Link,
   Outlet,
   useOutletContext,
   useParams,
   useRoutes,
+  useNavigate,
 } from "react-router-dom";
-import { fetchResources } from "@/services/resourceService";
+import { fetchResources, getResourceById } from "@/services/resourceService";
 import type { ClassifiedResource } from "@/types/resources";
-import { getCourseById, getCoursesByDepartmentAndSemester } from "@/data/academic-structure";
 import { useAcademicStructure } from "@/context/AcademicStructureContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/esm/Page/AnnotationLayer.css";
+import "react-pdf/dist/esm/Page/TextLayer.css";
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.js",
+  import.meta.url
+).toString();
 
 interface DigitalLibraryContext {
   loading: boolean;
@@ -40,8 +60,12 @@ const DigitalLibrary = () => {
           element: <SemesterView />,
         },
         {
-          path: "college/:collegeId/department/:departmentId/semester/:semesterId/course/:courseId",
+          path: "college/:collegeId/department/:departmentId/year/:yearId/semester/:semesterId/course/:courseId",
           element: <CourseView />,
+        },
+        {
+          path: "resource/:resourceId",
+          element: <ResourceViewer />,
         },
       ],
     },
@@ -177,7 +201,6 @@ const DepartmentView = () => {
     departmentId: string;
   }>();
   const { academicColleges } = useAcademicStructure();
-  
   const college = academicColleges.find((c) => c.id === collegeId);
   const department = college?.departments.find((d) => d.id === departmentId);
 
@@ -252,7 +275,7 @@ const DepartmentView = () => {
                         className="w-full justify-start text-xs"
                       >
                         <Link
-                          to={`semester/${semester.id}/course/${course.id}`}
+                          to={`year/${year.id}/semester/${semester.id}/course/${course.id}`}
                         >
                           <span className="font-mono">{course.code}</span>
                           <span className="ml-2 flex-1 text-left">{course.name}</span>
@@ -279,6 +302,7 @@ const SemesterView = () => {
     semesterId: string;
   }>();
   const { academicColleges } = useAcademicStructure();
+  const { userProfile } = useAuth();
 
   const [resources, setResources] = useState<ClassifiedResource[]>([]);
   const [loading, setLoading] = useState(true);
@@ -289,9 +313,11 @@ const SemesterView = () => {
   const year = department?.years.find((y) => y.id === yearId);
   const semester = year?.semesters.find((s) => s.id === semesterId);
 
+  const canDownload = userProfile?.role === "super_admin" || userProfile?.role === "librarian";
+
   useEffect(() => {
     const loadResources = async () => {
-      if (!college || !department || !semester) return;
+      if (!college || !department || !year || !semester) return;
 
       try {
         setLoading(true);
@@ -301,6 +327,7 @@ const SemesterView = () => {
           placement: 'academic',
           college: college.name,
           department: department.name,
+          year: year.name,
           semester: semester.name,
         });
 
@@ -314,9 +341,9 @@ const SemesterView = () => {
     };
 
     loadResources();
-  }, [college, department, semester]);
+  }, [college, department, year, semester]);
 
-  if (!college || !department || !semester) {
+  if (!college || !department || !year || !semester) {
     return (
       <NotFoundCard
         message="Invalid semester path."
@@ -438,26 +465,26 @@ const SemesterView = () => {
                 </span>
                 <div className="flex gap-2">
                   <Button asChild size="sm" variant="outline">
-                    <a
-                      href={`${resource.file.url}?fl_attachment:inline`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <Link
+                      to={`/digital-library/resource/${resource.id}`}
                       className="flex items-center gap-2"
                     >
                       <FileText className="w-4 h-4" />
                       View
-                    </a>
+                    </Link>
                   </Button>
-                  <Button asChild size="sm">
-                    <a
-                      href={`${resource.file.url}?fl_attachment:${resource.file.originalName}`}
-                      download
-                      className="flex items-center gap-2"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download
-                    </a>
-                  </Button>
+                  {canDownload && (
+                    <Button asChild size="sm">
+                      <a
+                        href={`${resource.file.url}?fl_attachment:${resource.file.originalName}`}
+                        download
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download
+                      </a>
+                    </Button>
+                  )}
                 </div>
               </div>
             </Card>
@@ -469,13 +496,15 @@ const SemesterView = () => {
 };
 
 const CourseView = () => {
-  const { collegeId, departmentId, semesterId, courseId } = useParams<{
+  const { collegeId, departmentId, yearId, semesterId, courseId } = useParams<{
     collegeId: string;
     departmentId: string;
+    yearId: string;
     semesterId: string;
     courseId: string;
   }>();
   const { academicColleges } = useAcademicStructure();
+  const { userProfile } = useAuth();
 
   const [resources, setResources] = useState<ClassifiedResource[]>([]);
   const [loading, setLoading] = useState(true);
@@ -483,13 +512,15 @@ const CourseView = () => {
 
   const college = academicColleges.find((c) => c.id === collegeId);
   const department = college?.departments.find((d) => d.id === departmentId);
-  const year = department?.years[0];
+  const year = department?.years.find((y) => y.id === yearId);
   const semester = year?.semesters.find((s) => s.id === semesterId);
   const course = semester?.courses.find((c) => c.id === courseId);
 
+  const canDownload = userProfile?.role === "super_admin" || userProfile?.role === "librarian";
+
   useEffect(() => {
     const loadResources = async () => {
-      if (!college || !department || !semester || !course) return;
+      if (!college || !department || !year || !semester || !course) return;
 
       try {
         setLoading(true);
@@ -499,6 +530,7 @@ const CourseView = () => {
           placement: 'academic',
           college: college.name,
           department: department.name,
+          year: year.name,
           semester: semester.name,
           course: course.name,
         });
@@ -513,9 +545,9 @@ const CourseView = () => {
     };
 
     loadResources();
-  }, [college, department, semester, course]);
+  }, [college, department, year, semester, course]);
 
-  if (!college || !department || !semester || !course) {
+  if (!college || !department || !year || !semester || !course) {
     return (
       <NotFoundCard
         message="Invalid course path."
@@ -631,31 +663,256 @@ const CourseView = () => {
                 </span>
                 <div className="flex gap-2">
                   <Button asChild size="sm" variant="outline">
-                    <a
-                      href={`${resource.file.url}?fl_attachment:inline`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <Link
+                      to={`/digital-library/resource/${resource.id}`}
                       className="flex items-center gap-2"
                     >
                       <FileText className="w-4 h-4" />
                       View
-                    </a>
+                    </Link>
                   </Button>
-                  <Button asChild size="sm">
-                    <a
-                      href={`${resource.file.url}?fl_attachment:${resource.file.originalName}`}
-                      download
-                      className="flex items-center gap-2"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download
-                    </a>
-                  </Button>
+                  {canDownload && (
+                    <Button asChild size="sm">
+                      <a
+                        href={`${resource.file.url}?fl_attachment:${resource.file.originalName}`}
+                        download
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download
+                      </a>
+                    </Button>
+                  )}
                 </div>
               </div>
             </Card>
           ))}
         </section>
+      )}
+    </div>
+  );
+};
+
+const ResourceViewer = () => {
+  const { resourceId } = useParams<{ resourceId: string }>();
+  const navigate = useNavigate();
+  const [resource, setResource] = useState<ClassifiedResource | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [zoom, setZoom] = useState(1.2);
+
+  useEffect(() => {
+    const loadResource = async () => {
+      if (!resourceId) return;
+
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getResourceById(resourceId);
+        setResource(data);
+      } catch (err) {
+        console.error("Failed to load resource:", err);
+        setError(err instanceof Error ? err.message : "Failed to load resource");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadResource();
+  }, [resourceId]);
+
+  const isPdf =
+    resource?.file?.mimeType?.toLowerCase?.().includes("pdf") ||
+    resource?.file?.format?.toLowerCase?.() === "pdf";
+
+  const handleZoomIn = () => setZoom((z) => Math.min(z + 0.2, 3));
+  const handleZoomOut = () => setZoom((z) => Math.max(z - 0.2, 0.6));
+  const handlePrevPage = () => setPageNumber((p) => Math.max(p - 1, 1));
+  const handleNextPage = () =>
+    setPageNumber((p) => (numPages ? Math.min(p + 1, numPages) : p));
+
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+    setPageNumber(1);
+  };
+
+  if (!resourceId) {
+    return (
+      <NotFoundCard
+        message="We couldn't find that resource."
+        actionLabel="Back to Digital Library"
+        to="/digital-library"
+      />
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error || !resource) {
+    return (
+      <Card className="p-8 text-center border-0 shadow-lg bg-secondary/20 space-y-4">
+        <p className="text-destructive">{error || "Resource not found."}</p>
+        <Button onClick={() => navigate(-1)}>Go Back</Button>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <Button
+          variant="ghost"
+          className="flex items-center gap-2 px-0"
+          onClick={() => navigate(-1)}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back</span>
+        </Button>
+
+        <div className="text-right flex-1 min-w-[200px]">
+          <h1 className="text-xl md:text-2xl font-bold break-words">
+            {resource.title}
+          </h1>
+          {resource.description && (
+            <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+              {resource.description}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {resource.college && (
+          <Badge className="bg-primary/15 text-primary border-primary/30 text-xs">
+            {resource.college}
+          </Badge>
+        )}
+        {resource.department && (
+          <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">
+            {resource.department}
+          </Badge>
+        )}
+        {resource.year && (
+          <Badge variant="secondary" className="text-xs">
+            {resource.year}
+          </Badge>
+        )}
+        {resource.semester && (
+          <Badge variant="secondary" className="text-xs">
+            {resource.semester}
+          </Badge>
+        )}
+        {resource.course && (
+          <Badge variant="secondary" className="text-xs">
+            {resource.course}
+          </Badge>
+        )}
+      </div>
+
+      {!isPdf && (
+        <Card className="p-8 text-center border-0 shadow-lg bg-secondary/20 space-y-4">
+          <p className="text-muted-foreground">
+            This resource is not a PDF or cannot be rendered inline.
+          </p>
+          <Button asChild>
+            <a
+              href={resource.file.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Open in new tab
+            </a>
+          </Button>
+        </Card>
+      )}
+
+      {isPdf && (
+        <Card className="border-0 shadow-lg bg-secondary/20 flex flex-col h-[70vh]">
+          <div className="flex items-center justify-between px-4 py-2 border-b gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={handleZoomOut}
+                className="h-8 w-8"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </Button>
+              <span className="text-xs text-muted-foreground w-16 text-center">
+                {Math.round(zoom * 100)}%
+              </span>
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={handleZoomIn}
+                className="h-8 w-8"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={handlePrevPage}
+                disabled={pageNumber <= 1}
+                className="h-8 w-8"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span>
+                Page {pageNumber} {numPages ? `of ${numPages}` : ""}
+              </span>
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={handleNextPage}
+                disabled={numPages !== null && pageNumber >= numPages}
+                className="h-8 w-8"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-auto bg-muted/40 flex items-center justify-center">
+            <Document
+              file={resource.file.url}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={(err) => {
+                console.error("Failed to render PDF:", err);
+                setError(
+                  err instanceof Error
+                    ? err.message
+                    : "Failed to render PDF document."
+                );
+              }}
+              loading={
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              }
+              className="flex items-center justify-center"
+            >
+              <Page
+                pageNumber={pageNumber}
+                scale={zoom}
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
+              />
+            </Document>
+          </div>
+        </Card>
       )}
     </div>
   );

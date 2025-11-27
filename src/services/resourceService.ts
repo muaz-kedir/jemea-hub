@@ -38,6 +38,7 @@ const parseResource = (raw: any): ClassifiedResource => {
     placement: raw.placement,
     college: raw.college || null,
     department: raw.department || null,
+    year: raw.year || null,
     semester: raw.semester || null,
     course: raw.course || null,
     tags: Array.isArray(raw.tags) ? raw.tags : [],
@@ -61,12 +62,25 @@ export const fetchResources = async (filters: ClassifiedResourceFilters = {}): P
   return Array.isArray(data.data) ? data.data.map(parseResource) : [];
 };
 
+export const getResourceById = async (id: string): Promise<ClassifiedResource> => {
+  const response = await fetch(`${API_URL}/api/resources/${id}`);
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to fetch resource');
+  }
+
+  const data = await response.json();
+  return parseResource(data.data);
+};
+
 export interface CreateResourcePayload {
   title: string;
   description?: string;
   placement: 'landing' | 'academic';
   college?: string;
   department?: string;
+  year?: string;
   semester?: string;
   course?: string;
   tags?: string[];
@@ -86,6 +100,7 @@ export const createResource = async (payload: CreateResourcePayload): Promise<Cl
   if (payload.placement === 'academic') {
     if (payload.college) formData.append('college', payload.college);
     if (payload.department) formData.append('department', payload.department);
+    if (payload.year) formData.append('year', payload.year);
     if (payload.semester) formData.append('semester', payload.semester);
     if (payload.course) formData.append('course', payload.course);
   }

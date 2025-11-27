@@ -48,7 +48,7 @@ router.post('/resources', resourceUpload.single('file'), async (req, res) => {
   if (!ensureFirestoreConfigured(res)) return;
 
   try {
-    const { title, description, placement, college, department, semester, course, tags, postedBy } = req.body;
+    const { title, description, placement, college, department, year, semester, course, tags, postedBy } = req.body;
 
     if (!title || !placement) {
       return res.status(400).json({
@@ -64,10 +64,10 @@ router.post('/resources', resourceUpload.single('file'), async (req, res) => {
       });
     }
 
-    if (placement === 'academic' && (!college || !department || !semester || !course)) {
+    if (placement === 'academic' && (!college || !department || !year || !semester || !course)) {
       return res.status(400).json({
         success: false,
-        error: 'College, department, semester, and course are required for academic resources.',
+        error: 'College, department, year, semester, and course are required for academic resources.',
       });
     }
 
@@ -92,6 +92,7 @@ router.post('/resources', resourceUpload.single('file'), async (req, res) => {
       placement,
       college: placement === 'academic' ? college?.trim() || null : null,
       department: placement === 'academic' ? department?.trim() || null : null,
+      year: placement === 'academic' ? year?.trim() || null : null,
       semester: placement === 'academic' ? semester?.trim() || null : null,
       course: placement === 'academic' ? course?.trim() || null : null,
       tags: parsedTags,
@@ -130,7 +131,7 @@ router.get('/resources', async (req, res) => {
   if (!ensureFirestoreConfigured(res)) return;
 
   try {
-    const { placement, college, department, semester, course } = req.query;
+    const { placement, college, department, year, semester, course } = req.query;
 
     let queryRef = firestore.collection('classified_resources');
 
@@ -144,6 +145,10 @@ router.get('/resources', async (req, res) => {
 
     if (department) {
       queryRef = queryRef.where('department', '==', department);
+    }
+
+    if (year) {
+      queryRef = queryRef.where('year', '==', year);
     }
 
     if (semester) {

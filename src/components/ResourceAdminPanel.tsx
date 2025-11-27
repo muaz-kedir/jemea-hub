@@ -249,17 +249,20 @@ export const ResourceAdminPanel = ({
       // Get names from IDs for academic classification
       let collegeName: string | undefined;
       let departmentName: string | undefined;
+      let yearName: string | undefined;
       let semesterName: string | undefined;
       let courseName: string | undefined;
 
       if (placement === "academic") {
         const college = selectedCollege;
         const department = selectedDepartment;
+        const year = selectedYear;
         const semester = availableSemesters.find((s) => s.id === selectedSemesterId);
         const course = availableCourses.find((c) => c.id === selectedCourseId);
 
         collegeName = college?.name;
         departmentName = department?.name;
+        yearName = year?.name;
         semesterName = semester?.name;
         courseName = course?.name;
       }
@@ -270,6 +273,7 @@ export const ResourceAdminPanel = ({
         placement,
         college: collegeName,
         department: departmentName,
+        year: yearName,
         semester: semesterName,
         course: courseName,
         tags,

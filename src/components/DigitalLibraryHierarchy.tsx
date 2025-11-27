@@ -83,7 +83,7 @@ export const DigitalLibraryHierarchy = ({
       const college = resource.college || "Uncategorized";
       const department = resource.department || "General";
       const semester = resource.semester || "Semester 1";
-      const year = inferYear(semester);
+      const year = resource.year || inferYear(semester);
       const course = resource.course || "General";
 
       if (!result[college]) {

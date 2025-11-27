@@ -15,6 +15,7 @@ export interface ClassifiedResource {
   placement: 'landing' | 'academic';
   college: string | null;
   department: string | null;
+  year: string | null;
   semester: string | null;
   course: string | null;
   tags: string[];
@@ -28,6 +29,7 @@ export interface ClassifiedResourceFilters {
   placement?: 'landing' | 'academic';
   college?: string;
   department?: string;
+   year?: string;
   semester?: string;
   course?: string;
 }
