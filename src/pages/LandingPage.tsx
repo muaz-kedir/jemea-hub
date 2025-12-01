@@ -29,6 +29,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { BorrowRegistrationForm } from "@/components/BorrowRegistrationForm";
 import { useState, useEffect, useRef } from "react";
 import { HumsjLogo } from "@/components/HumsjLogo";
 import { db } from "@/lib/firebase";
@@ -81,6 +82,8 @@ const LandingPage = () => {
   const [activeTutorials, setActiveTutorials] = useState<FirestoreRecord[]>([]);
   const [latestLibraryUploads, setLatestLibraryUploads] = useState<FirestoreRecord[]>([]);
   const [selectedLibraryResource, setSelectedLibraryResource] = useState<FirestoreRecord | null>(null);
+  const [borrowBook, setBorrowBook] = useState<FirestoreRecord | null>(null);
+  const [showBorrowForm, setShowBorrowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [likeCount, setLikeCount] = useState(0);
   const [dislikeCount, setDislikeCount] = useState(0);
@@ -886,14 +889,26 @@ const LandingPage = () => {
                           </a>
                         </Button>
                       ) : (
-                        <Button
-                          variant="outline"
-                          className="w-full rounded-full"
-                          size="sm"
-                          onClick={() => setSelectedLibraryResource(book)}
-                        >
-                          View Details
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            className="flex-1 rounded-full"
+                            size="sm"
+                            onClick={() => setSelectedLibraryResource(book)}
+                          >
+                            View Details
+                          </Button>
+                          <Button
+                            className="flex-1 rounded-full"
+                            size="sm"
+                            onClick={() => {
+                              setBorrowBook(book);
+                              setShowBorrowForm(true);
+                            }}
+                          >
+                            Borrow
+                          </Button>
+                        </div>
                       )}
                     </SpotlightCard>
                   );
@@ -986,14 +1001,41 @@ const LandingPage = () => {
                 <span className="text-sm text-muted-foreground">
                   Last updated {getTimeAgo(selectedLibraryResource.addedAt)}
                 </span>
-                <Button onClick={() => setSelectedLibraryResource(null)} className="rounded-full">
-                  Close
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setSelectedLibraryResource(null)} 
+                    className="rounded-full"
+                  >
+                    Close
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setBorrowBook(selectedLibraryResource);
+                      setSelectedLibraryResource(null);
+                      setShowBorrowForm(true);
+                    }} 
+                    className="rounded-full"
+                  >
+                    Borrow This Book
+                  </Button>
+                </div>
               </DialogFooter>
             </>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Borrow Registration Form */}
+      <BorrowRegistrationForm
+        book={borrowBook}
+        open={showBorrowForm}
+        onOpenChange={(open) => {
+          setShowBorrowForm(open);
+          if (!open) setBorrowBook(null);
+        }}
+      />
+
       {/* Sectors Navigation */}
       <section id="sectors" className="py-16 bg-secondary/30 scroll-mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link, useNavigate } from "react-router-dom";
 import { Chrome, Facebook } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, getAdminDashboardRoute, UserRole } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { toast } from "sonner";
 import { doc, getDoc } from "firebase/firestore";
@@ -27,24 +27,30 @@ const Login = () => {
       toast.success("Logged in successfully!");
 
       const roleDoc = await getDoc(doc(db, "user_roles", userCredential.user.uid));
-      const role = (roleDoc.exists() ? roleDoc.data().role : "student") as string;
+      const role = (roleDoc.exists() ? roleDoc.data().role : "student") as UserRole;
 
-      switch (role) {
-        case "librarian":
-          navigate("/library-dashboard", { replace: true });
-          break;
-        case "tutor":
-          navigate("/tutor-dashboard", { replace: true });
-          break;
-        case "trainer":
-          navigate("/trainer-dashboard", { replace: true });
-          break;
-        case "super_admin":
-          navigate("/admin-dashboard", { replace: true });
-          break;
-        default:
-          navigate("/landing", { replace: true });
-          break;
+      // Handle admin roles with dedicated dashboards
+      const adminRoles: UserRole[] = ["super_admin", "library_admin", "tutorial_admin", "training_admin"];
+      
+      if (adminRoles.includes(role)) {
+        const dashboardRoute = getAdminDashboardRoute(role);
+        navigate(dashboardRoute, { replace: true });
+      } else {
+        // Handle other roles
+        switch (role) {
+          case "librarian":
+            navigate("/library-dashboard", { replace: true });
+            break;
+          case "tutor":
+            navigate("/tutor-dashboard", { replace: true });
+            break;
+          case "trainer":
+            navigate("/trainer-dashboard", { replace: true });
+            break;
+          default:
+            navigate("/landing", { replace: true });
+            break;
+        }
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to log in";

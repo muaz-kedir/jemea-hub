@@ -1,5 +1,4 @@
-import { Header } from "@/components/Header";
-import { BottomNav } from "@/components/BottomNav";
+import { AdminLayout } from "@/components/AdminLayout";
 import { UserManagement } from "@/components/UserManagement";
 import { Link } from "react-router-dom";
 import { 
@@ -169,9 +168,7 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen pb-24 bg-gradient-to-br from-background via-background to-secondary/20">
-      <Header />
-      
+    <AdminLayout>
       <div className="p-6 space-y-6">
         {/* Welcome Section */}
         <div className="bg-gradient-to-r from-primary to-primary/80 rounded-3xl p-6 text-white shadow-lg">
@@ -238,7 +235,7 @@ const AdminDashboard = () => {
                   <p className="text-sm font-medium">My Profile</p>
                 </Link>
                 <button
-                  onClick={() => document.querySelector('[value="users"]')?.click()}
+                  onClick={() => (document.querySelector('[value="users"]') as HTMLElement)?.click()}
                   className="p-4 bg-secondary rounded-xl hover:bg-secondary/80 transition-all text-center"
                 >
                   <UserCheck className="w-6 h-6 mx-auto mb-2 text-primary" />
@@ -335,9 +332,7 @@ const AdminDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
-
-      <BottomNav />
-    </div>
+    </AdminLayout>
   );
 };
 

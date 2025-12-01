@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { Header } from "@/components/Header";
-import { BottomNav } from "@/components/BottomNav";
+import { AdminLayout } from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,10 +14,16 @@ import {
   Users, 
   TrendingUp,
   Search,
-  ArrowLeft,
   FileText,
-  Calendar,
-  GraduationCap
+  GraduationCap,
+  ClipboardList,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Phone,
+  Mail,
+  MapPin,
+  User
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { db } from "@/lib/firebase";
@@ -50,6 +55,22 @@ interface LibraryResource {
   addedAt: any;
 }
 
+interface BorrowRequest {
+  id: string;
+  bookId: string;
+  bookTitle: string;
+  bookAuthor: string;
+  fullName: string;
+  email: string;
+  telegramUsername: string;
+  phoneNumber: string;
+  idNumber: string;
+  building: string;
+  dormNumber: string;
+  status: "pending" | "approved" | "rejected" | "returned";
+  createdAt: any;
+}
+
 const sanitizeData = <T extends Record<string, any>>(data: T): T => {
   const cleanedEntries = Object.entries(data).filter(([_, value]) => {
     if (value === undefined || value === null) return false;
@@ -62,10 +83,11 @@ const sanitizeData = <T extends Record<string, any>>(data: T): T => {
 const LibraryAdminDashboard = () => {
   const { toast } = useToast();
   const [resources, setResources] = useState<LibraryResource[]>([]);
+  const [borrowRequests, setBorrowRequests] = useState<BorrowRequest[]>([]);
   const [isAddingResource, setIsAddingResource] = useState(false);
   const [editingResource, setEditingResource] = useState<LibraryResource | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"library" | "academic" | "courses">("library");
+  const [activeTab, setActiveTab] = useState<"library" | "academic" | "courses" | "requests">("library");
   const [coursesUpdated, setCoursesUpdated] = useState(0); // Trigger re-renders when courses change
   const [formData, setFormData] = useState({
     title: "",
@@ -83,7 +105,47 @@ const LibraryAdminDashboard = () => {
 
   useEffect(() => {
     loadResources();
+    loadBorrowRequests();
   }, []);
+
+  const loadBorrowRequests = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "borrow_requests"));
+      const requestsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as BorrowRequest[];
+      // Sort by createdAt descending
+      requestsData.sort((a, b) => {
+        const dateA = a.createdAt?.toDate?.() || new Date(0);
+        const dateB = b.createdAt?.toDate?.() || new Date(0);
+        return dateB.getTime() - dateA.getTime();
+      });
+      setBorrowRequests(requestsData);
+    } catch (error) {
+      console.error("Error loading borrow requests:", error);
+    }
+  };
+
+  const updateRequestStatus = async (requestId: string, status: BorrowRequest["status"]) => {
+    try {
+      await updateDoc(doc(db, "borrow_requests", requestId), { status });
+      setBorrowRequests(prev => 
+        prev.map(req => req.id === requestId ? { ...req, status } : req)
+      );
+      toast({
+        title: "Status Updated",
+        description: `Request has been ${status}`,
+      });
+    } catch (error) {
+      console.error("Error updating request:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update request status",
+        variant: "destructive",
+      });
+    }
+  };
 
   const loadResources = async () => {
     try {
@@ -282,22 +344,13 @@ const LibraryAdminDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen pb-24 bg-gradient-to-br from-background via-background to-blue-500/10">
-      <Header />
-      
+    <AdminLayout>
       <div className="p-6 space-y-6">
         {/* Header Section */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link to="/admin-dashboard">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold">Library Dashboard</h1>
-              <p className="text-sm text-muted-foreground">Manage library resources and books</p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold">Library Dashboard</h1>
+            <p className="text-sm text-muted-foreground">Manage library resources and books</p>
           </div>
           <div className="flex gap-2">
             <Button onClick={() => setIsAddingResource(true)} className="gap-2">
@@ -312,11 +365,19 @@ const LibraryAdminDashboard = () => {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "library" | "academic" | "courses")}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="library">Library Resources</TabsTrigger>
-            <TabsTrigger value="academic">Academic Resources</TabsTrigger>
-            <TabsTrigger value="courses">Manage Courses</TabsTrigger>
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "library" | "academic" | "courses" | "requests")}>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="library">Resources</TabsTrigger>
+            <TabsTrigger value="requests" className="relative">
+              Requests
+              {borrowRequests.filter(r => r.status === "pending").length > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                  {borrowRequests.filter(r => r.status === "pending").length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="academic">Academic</TabsTrigger>
+            <TabsTrigger value="courses">Courses</TabsTrigger>
           </TabsList>
 
           <TabsContent value="library" className="space-y-6">
@@ -575,7 +636,7 @@ const LibraryAdminDashboard = () => {
               </p>
             </Card>
           )}
-            </div>
+        </div>
           </TabsContent>
 
           <TabsContent value="academic" className="space-y-6">
@@ -589,11 +650,163 @@ const LibraryAdminDashboard = () => {
           <TabsContent value="courses" className="space-y-6">
             <CourseManagement onCoursesUpdate={() => setCoursesUpdated(prev => prev + 1)} />
           </TabsContent>
+
+          {/* Borrow Requests Tab */}
+          <TabsContent value="requests" className="space-y-6">
+            {/* Request Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <Card className="p-4 border-0 shadow-md">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-yellow-500 rounded-xl flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{borrowRequests.filter(r => r.status === "pending").length}</p>
+                    <p className="text-xs text-muted-foreground">Pending</p>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-4 border-0 shadow-md">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{borrowRequests.filter(r => r.status === "approved").length}</p>
+                    <p className="text-xs text-muted-foreground">Approved</p>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-4 border-0 shadow-md">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-red-500 rounded-xl flex items-center justify-center">
+                    <XCircle className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{borrowRequests.filter(r => r.status === "rejected").length}</p>
+                    <p className="text-xs text-muted-foreground">Rejected</p>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-4 border-0 shadow-md">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+                    <ClipboardList className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{borrowRequests.length}</p>
+                    <p className="text-xs text-muted-foreground">Total</p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Requests List */}
+            {borrowRequests.length === 0 ? (
+              <Card className="p-8 text-center border-0 shadow-md">
+                <ClipboardList className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-muted-foreground">No borrow requests yet</p>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {borrowRequests.map((request) => (
+                  <Card key={request.id} className="p-4 border-0 shadow-md">
+                    <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+                      {/* Book Info */}
+                      <div className="flex items-start gap-3 flex-1">
+                        <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <BookOpen className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-lg">{request.bookTitle}</h3>
+                          <p className="text-sm text-muted-foreground">by {request.bookAuthor}</p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              request.status === "pending" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
+                              request.status === "approved" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                              request.status === "rejected" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
+                              "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                            }`}>
+                              {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {request.createdAt?.toDate?.().toLocaleDateString() || "Unknown date"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* User Info */}
+                      <div className="flex-1 bg-muted/50 rounded-xl p-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-muted-foreground" />
+                          <span className="font-medium">{request.fullName}</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Mail className="w-3 h-3 text-muted-foreground" />
+                            <span className="truncate">{request.email}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-3 h-3 text-muted-foreground" />
+                            <span>{request.phoneNumber}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Telegram:</span>
+                            <span>{request.telegramUsername}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">ID:</span>
+                            <span>{request.idNumber}</span>
+                          </div>
+                          <div className="flex items-center gap-2 sm:col-span-2">
+                            <MapPin className="w-3 h-3 text-muted-foreground" />
+                            <span>{request.building}, Dorm {request.dormNumber}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      {request.status === "pending" && (
+                        <div className="flex lg:flex-col gap-2">
+                          <Button
+                            size="sm"
+                            className="flex-1 lg:flex-none gap-1"
+                            onClick={() => updateRequestStatus(request.id, "approved")}
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="flex-1 lg:flex-none gap-1"
+                            onClick={() => updateRequestStatus(request.id, "rejected")}
+                          >
+                            <XCircle className="w-4 h-4" />
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                      {request.status === "approved" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1"
+                          onClick={() => updateRequestStatus(request.id, "returned")}
+                        >
+                          Mark Returned
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
         </Tabs>
       </div>
-
-      <BottomNav />
-    </div>
+    </AdminLayout>
   );
 };
 

@@ -1,13 +1,15 @@
-import { Navigate } from "react-router-dom";
-import { useAuth, UserRole } from "@/contexts/AuthContext";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth, UserRole, canAccessAdminRoute } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: UserRole[];
+  adminRoute?: "library" | "tutorial" | "training" | "resources";
 }
 
-export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
+export const ProtectedRoute = ({ children, allowedRoles, adminRoute }: ProtectedRouteProps) => {
   const { user, userProfile, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -24,6 +26,15 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/login" replace />;
   }
 
+  // Handle admin route protection
+  if (adminRoute && userProfile) {
+    const routePath = `/admin/${adminRoute}`;
+    if (!canAccessAdminRoute(userProfile.role, routePath)) {
+      return <Navigate to="/unauthorized" replace />;
+    }
+  }
+
+  // Handle general role-based protection
   if (allowedRoles && userProfile && !allowedRoles.includes(userProfile.role)) {
     return <Navigate to="/unauthorized" replace />;
   }

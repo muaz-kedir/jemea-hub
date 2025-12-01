@@ -56,10 +56,10 @@ const App = () => (
             <Route path="/trainer-dashboard" element={<ProtectedRoute allowedRoles={["trainer", "super_admin"]}><TrainerDashboard /></ProtectedRoute>} />
             <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={["super_admin"]}><AdminDashboard /></ProtectedRoute>} />
             
-            {/* Super Admin Sub-Dashboards */}
-            <Route path="/admin/library" element={<ProtectedRoute allowedRoles={["super_admin"]}><LibraryAdminDashboard /></ProtectedRoute>} />
-            <Route path="/admin/tutorial" element={<ProtectedRoute allowedRoles={["super_admin"]}><TutorialAdminDashboard /></ProtectedRoute>} />
-            <Route path="/admin/training" element={<ProtectedRoute allowedRoles={["super_admin"]}><TrainingAdminDashboard /></ProtectedRoute>} />
+            {/* Admin Dashboards - Protected by email AND role */}
+            <Route path="/admin/library" element={<ProtectedRoute adminRoute="library"><LibraryAdminDashboard /></ProtectedRoute>} />
+            <Route path="/admin/tutorial" element={<ProtectedRoute adminRoute="tutorial"><TutorialAdminDashboard /></ProtectedRoute>} />
+            <Route path="/admin/training" element={<ProtectedRoute adminRoute="training"><TrainingAdminDashboard /></ProtectedRoute>} />
             <Route path="/admin/resources" element={<ProtectedRoute allowedRoles={["super_admin"]}><ResourceAdminDashboard /></ProtectedRoute>} />
             
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

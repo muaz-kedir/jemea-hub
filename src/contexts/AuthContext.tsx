@@ -11,7 +11,52 @@ import {
 import { doc, setDoc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
-export type UserRole = "student" | "tutor" | "trainer" | "librarian" | "super_admin";
+export type UserRole = "student" | "tutor" | "trainer" | "librarian" | "super_admin" | "library_admin" | "tutorial_admin" | "training_admin";
+
+// Admin email to role mapping
+export const ADMIN_EMAIL_ROLES: Record<string, UserRole> = {
+  "libraryhumsj@gmail.com": "library_admin",
+  "tutorialhumsj@gmail.com": "tutorial_admin",
+  "traininghumsj@gmail.com": "training_admin",
+};
+
+// Get admin role from email
+export const getAdminRoleFromEmail = (email: string): UserRole | null => {
+  const normalizedEmail = email.toLowerCase().trim();
+  return ADMIN_EMAIL_ROLES[normalizedEmail] || null;
+};
+
+// Admin route permissions
+export const ADMIN_ROUTE_PERMISSIONS: Record<string, UserRole[]> = {
+  "/admin/library": ["library_admin", "super_admin"],
+  "/admin/tutorial": ["tutorial_admin", "super_admin"],
+  "/admin/training": ["training_admin", "super_admin"],
+  "/admin/resources": ["super_admin"],
+  "/admin-dashboard": ["super_admin"],
+};
+
+// Check if user can access a specific admin route
+export const canAccessAdminRoute = (role: UserRole, route: string): boolean => {
+  const allowedRoles = ADMIN_ROUTE_PERMISSIONS[route];
+  if (!allowedRoles) return false;
+  return allowedRoles.includes(role);
+};
+
+// Get the dashboard route for an admin role
+export const getAdminDashboardRoute = (role: UserRole): string => {
+  switch (role) {
+    case "library_admin":
+      return "/admin/library";
+    case "tutorial_admin":
+      return "/admin/tutorial";
+    case "training_admin":
+      return "/admin/training";
+    case "super_admin":
+      return "/admin-dashboard";
+    default:
+      return "/landing";
+  }
+};
 
 export interface UserProfile {
   uid: string;
@@ -91,7 +136,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    return await signInWithEmailAndPassword(auth, email, password);
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    
+    // Check if this is a special admin email and update role if needed
+    const adminRole = getAdminRoleFromEmail(email);
+    if (adminRole) {
+      // Ensure the admin role is set in Firestore
+      await setDoc(doc(db, "user_roles", userCredential.user.uid), {
+        userId: userCredential.user.uid,
+        role: adminRole,
+        assignedAt: new Date(),
+        assignedBy: "system_email_match",
+      }, { merge: true });
+    }
+    
+    return userCredential;
   };
 
   const signUp = async (
