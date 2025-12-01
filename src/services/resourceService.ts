@@ -179,6 +179,33 @@ export const generateResourceFlashcards = async (id: string) => {
   return (data.data?.flashcards ?? []) as Flashcard[];
 };
 
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export const chatWithResource = async (
+  id: string,
+  question: string,
+  chatHistory: ChatMessage[] = []
+): Promise<{ answer: string; resourceTitle: string }> => {
+  const response = await fetch(`${API_URL}/api/resources/${id}/ai/chat`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ question, chatHistory }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to get response');
+  }
+
+  const data = await response.json();
+  return data.data as { answer: string; resourceTitle: string };
+};
+
 export interface CreateResourcePayload {
   title: string;
   description?: string;

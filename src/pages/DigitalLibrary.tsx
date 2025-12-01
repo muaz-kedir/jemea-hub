@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   BookOpen,
   ArrowLeft,
@@ -18,6 +20,8 @@ import {
   ChevronRight,
   Sparkles,
   Layers,
+  MessageCircle,
+  Send,
 } from "lucide-react";
 import {
   Link,
@@ -34,8 +38,10 @@ import {
   getResourceAIData,
   generateResourceSummary,
   generateResourceFlashcards,
+  chatWithResource,
   type ResourceAIData,
   type Flashcard,
+  type ChatMessage,
 } from "@/services/resourceService";
 import type { ClassifiedResource } from "@/types/resources";
 import { useAcademicStructure } from "@/context/AcademicStructureContext";
@@ -722,6 +728,12 @@ const ResourceViewer = () => {
   const [activeTab, setActiveTab] = useState("viewer");
   const [flashcardIndex, setFlashcardIndex] = useState(0);
   const [showFlashcardBack, setShowFlashcardBack] = useState(false);
+  
+  // Chat state
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadResource = async () => {
@@ -796,6 +808,28 @@ const ResourceViewer = () => {
   const hasSummary = !!aiData?.summaryShort || !!aiData?.summaryLong;
 
   const flashcards = aiData?.flashcards ?? [];
+
+  // Chat handler
+  const handleSendMessage = useCallback(async () => {
+    if (!resourceId || !chatInput.trim() || chatLoading) return;
+
+    const userMessage: ChatMessage = { role: 'user', content: chatInput.trim() };
+    setChatMessages(prev => [...prev, userMessage]);
+    setChatInput("");
+    setChatLoading(true);
+    setChatError(null);
+
+    try {
+      const response = await chatWithResource(resourceId, userMessage.content, chatMessages);
+      const assistantMessage: ChatMessage = { role: 'assistant', content: response.answer };
+      setChatMessages(prev => [...prev, assistantMessage]);
+    } catch (err) {
+      console.error("Failed to get chat response:", err);
+      setChatError(err instanceof Error ? err.message : "Failed to get response");
+    } finally {
+      setChatLoading(false);
+    }
+  }, [resourceId, chatInput, chatLoading, chatMessages]);
 
   useEffect(() => {
     setFlashcardIndex(0);
@@ -1015,6 +1049,10 @@ const ResourceViewer = () => {
             <Layers className="w-4 h-4" />
             Flashcards
           </TabsTrigger>
+          <TabsTrigger value="chat" className="flex items-center gap-2">
+            <MessageCircle className="w-4 h-4" />
+            Chat with PDF
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="viewer" className="mt-0">
@@ -1232,6 +1270,87 @@ const ResourceViewer = () => {
                 </Button>
               </div>
             )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="chat" className="mt-0">
+          <Card className="border-0 shadow-lg bg-secondary/20 flex flex-col h-[70vh]">
+            <div className="p-4 border-b">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-primary" />
+                Chat with PDF
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Ask any question about this document and get detailed explanations.
+              </p>
+            </div>
+
+            <ScrollArea className="flex-1 p-4">
+              <div className="space-y-4">
+                {chatMessages.length === 0 && !chatLoading && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-sm">Start a conversation about this document.</p>
+                    <p className="text-xs mt-2">Try asking about key concepts, definitions, or explanations.</p>
+                  </div>
+                )}
+
+                {chatMessages.map((msg, index) => (
+                  <div
+                    key={index}
+                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[80%] p-3 rounded-lg ${
+                        msg.role === 'user'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted'
+                      }`}
+                    >
+                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                    </div>
+                  </div>
+                ))}
+
+                {chatLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-muted p-3 rounded-lg">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Thinking...
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {chatError && (
+                  <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">
+                    {chatError}
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+
+            <div className="p-4 border-t">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSendMessage();
+                }}
+                className="flex gap-2"
+              >
+                <Input
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Ask a question about this document..."
+                  disabled={chatLoading}
+                  className="flex-1"
+                />
+                <Button type="submit" disabled={chatLoading || !chatInput.trim()}>
+                  <Send className="w-4 h-4" />
+                </Button>
+              </form>
+            </div>
           </Card>
         </TabsContent>
       </Tabs>

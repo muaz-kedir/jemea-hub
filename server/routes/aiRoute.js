@@ -19,7 +19,7 @@ const ensureFirestoreConfigured = (res) => {
 };
 
 const generateText = async (prompt) => {
-  const model = (process.env.OPENROUTER_DEFAULT_MODEL || 'openrouter/auto').trim();
+  const model = (process.env.GROQ_DEFAULT_MODEL || 'llama-3.3-70b-versatile').trim();
   const response = await chatCompletions({
     model,
     messages: [
@@ -109,29 +109,60 @@ const buildBaseAIPayload = (resourceId, resourceData) => ({
 });
 
 const extractJson = (text) => {
-  const cleaned = text.trim().replace(/```json|```/gi, '').trim();
+  console.log('🔍 Raw AI response length:', text.length);
+  
+  // Remove all markdown code blocks (backticks)
+  let cleaned = text.trim();
+  // Remove opening backticks with optional json label
+  cleaned = cleaned.replace(/^```(?:json)?\s*/i, '');
+  // Remove closing backticks
+  cleaned = cleaned.replace(/\s*```$/i, '');
+  cleaned = cleaned.trim();
 
   const tryParse = (value) => {
     try {
-      return JSON.parse(value);
+      const parsed = JSON.parse(value);
+      console.log('✅ Parsed JSON successfully');
+      return parsed;
     } catch (error) {
+      console.log('❌ JSON parse error:', error.message);
       return null;
     }
   };
 
-  const direct = tryParse(cleaned);
-  if (direct !== null) {
-    return direct;
-  }
+  // First try parsing directly
+  let result = tryParse(cleaned);
+  if (result !== null) return result;
 
-  const match = cleaned.match(/[\[{][\s\S]*[\]}]/);
+  // Try to find JSON object in the text
+  const match = cleaned.match(/\{[\s\S]*\}/);
   if (match) {
-    const matched = tryParse(match[0]);
-    if (matched !== null) {
-      return matched;
-    }
+    result = tryParse(match[0]);
+    if (result !== null) return result;
   }
 
+  // Fix newlines inside JSON string values only (not structural newlines)
+  // This regex finds content between quotes and escapes newlines there
+  const fixNewlinesInStrings = (jsonStr) => {
+    return jsonStr.replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, (match) => {
+      return match
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '\\r')
+        .replace(/\t/g, '\\t');
+    });
+  };
+
+  const fixed = fixNewlinesInStrings(cleaned);
+  result = tryParse(fixed);
+  if (result !== null) return result;
+
+  if (match) {
+    const fixedMatch = fixNewlinesInStrings(match[0]);
+    result = tryParse(fixedMatch);
+    if (result !== null) return result;
+  }
+
+  console.error('❌ Failed to extract JSON. Cleaned text:', cleaned.substring(0, 500));
   throw new Error('AI did not return valid JSON.');
 };
 
@@ -172,20 +203,34 @@ router.post('/resources/:id/ai/summary', async (req, res) => {
     const { resourceData, extractedText } = await loadResourceAndText(id);
     const trimmedText = extractedText.slice(0, 20000);
 
-    const prompt = `You are an academic assistant helping university students understand course materials.
+    const prompt = `You are an expert academic assistant helping university students deeply understand course materials.
 
-Given the following resource content, generate a structured summary with:
-- shortSummary: 2-4 sentences, simple language.
-- longSummary: multi-section explanation with headings and bullet points where helpful.
+Given the following resource content, generate a comprehensive and detailed summary with:
 
-Return ONLY valid JSON in this exact shape:
+1. shortSummary: A concise 3-5 sentence overview that captures the main topic, key concepts, and importance of the material.
+
+2. longSummary: A thorough, well-structured explanation that includes:
+   - An introduction explaining what the document covers
+   - Multiple sections with clear headings (use ## for headings)
+   - Detailed explanations of all key concepts, theories, and definitions
+   - Important formulas, methods, or processes if applicable
+   - Real-world applications or examples
+   - Relationships between different concepts
+   - Key takeaways and conclusions
+   - Use bullet points (- ) for lists
+   - Make it comprehensive enough that a student could use it as study notes
+
+IMPORTANT: Return ONLY valid JSON. Do not include any newlines within the string values - use spaces instead.
+
+Return in this exact JSON format:
 {
-  "shortSummary": string,
-  "longSummary": string
+  "shortSummary": "your short summary here as a single line",
+  "longSummary": "your detailed summary here with ## for headings and - for bullets, all on a single line"
 }
 
 Resource content starts below:
---------------------\n${trimmedText}`;
+--------------------
+${trimmedText}`;
 
     const text = await generateText(prompt);
 
@@ -320,6 +365,75 @@ Resource content starts below:
     const status = err.status || 500;
     console.error('❌ AI flashcards error:', err);
     return res.status(status).json({ success: false, error: err.message || 'Failed to generate flashcards.' });
+  }
+});
+
+// Chat with PDF endpoint
+router.post('/resources/:id/ai/chat', async (req, res) => {
+  if (!ensureFirestoreConfigured(res)) return;
+
+  try {
+    const { id } = req.params;
+    const { question, chatHistory = [] } = req.body;
+
+    if (!question || typeof question !== 'string' || !question.trim()) {
+      return res.status(400).json({ success: false, error: 'Question is required.' });
+    }
+
+    const { resourceData, extractedText } = await loadResourceAndText(id);
+    const trimmedText = extractedText.slice(0, 15000);
+
+    // Build conversation history for context
+    const historyContext = chatHistory.slice(-6).map(msg => 
+      `${msg.role === 'user' ? 'Student' : 'Assistant'}: ${msg.content}`
+    ).join('\n');
+
+    const prompt = `You are an expert academic tutor helping a university student understand a document. Your role is to:
+- Provide clear, detailed, and accurate explanations based on the document content
+- Use examples and analogies to make complex concepts easier to understand
+- If the question is not related to the document, politely redirect to document-related topics
+- Format your response with clear structure using paragraphs, bullet points, or numbered lists when helpful
+- Be encouraging and supportive in your teaching style
+
+DOCUMENT CONTENT:
+--------------------
+${trimmedText}
+--------------------
+
+${historyContext ? `PREVIOUS CONVERSATION:\n${historyContext}\n\n` : ''}STUDENT'S QUESTION: ${question.trim()}
+
+Provide a helpful, detailed response based on the document content above:`;
+
+    const model = (process.env.GROQ_DEFAULT_MODEL || 'llama-3.3-70b-versatile').trim();
+    const response = await chatCompletions({
+      model,
+      messages: [
+        { role: 'user', content: prompt },
+      ],
+      max_tokens: 2000,
+      temperature: 0.7,
+    });
+
+    const answer = response?.choices?.[0]?.message?.content || '';
+    
+    if (!answer) {
+      throw new Error('AI did not return a response.');
+    }
+
+    console.log('✅ Chat response generated for resource:', id);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        answer: answer.trim(),
+        resourceId: id,
+        resourceTitle: resourceData.title || 'Untitled',
+      },
+    });
+  } catch (err) {
+    const status = err.status || 500;
+    console.error('❌ AI chat error:', err);
+    return res.status(status).json({ success: false, error: err.message || 'Failed to get response.' });
   }
 });
 
