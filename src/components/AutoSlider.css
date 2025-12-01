@@ -1,0 +1,26 @@
+.auto-slider-container {
+  overflow: hidden;
+  width: 100%;
+  padding-bottom: 1rem;
+}
+
+.auto-slider-track {
+  display: flex;
+  gap: 1.5rem;
+  width: max-content;
+  animation: scroll-left linear infinite;
+}
+
+@keyframes scroll-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* Ensure cards don't shrink */
+.auto-slider-track > * {
+  flex-shrink: 0;
+}

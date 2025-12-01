@@ -16,6 +16,7 @@ import {
   ThumbsUp,
   ThumbsDown
 } from "lucide-react";
+import { AutoSlider } from "@/components/AutoSlider";
 import StarBorder from "@/components/StarBorder";
 import { Card } from "@/components/ui/card";
 import { SpotlightCard } from "@/components/SpotlightCard";
@@ -100,79 +101,7 @@ const LandingPage = () => {
     loadData();
   }, []);
 
-  const sliderRefs = {
-    trainings: useRef<HTMLDivElement>(null),
-    tutorials: useRef<HTMLDivElement>(null),
-    library: useRef<HTMLDivElement>(null),
-  };
-
-  useEffect(() => {
-    const containers = Object.values(sliderRefs).map((ref) => ref.current).filter(Boolean) as HTMLDivElement[];
-
-    const handleWheel = (event: WheelEvent) => {
-      const target = event.currentTarget as HTMLDivElement;
-      if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
-        event.preventDefault();
-        target.scrollTo({
-          left: target.scrollLeft + event.deltaY,
-          behavior: "smooth",
-        });
-      }
-    };
-
-    const cleanups: Array<() => void> = [];
-
-    containers.forEach((container) => {
-      container.addEventListener("wheel", handleWheel, { passive: false });
-
-      let animationId: number;
-      let isPaused = false;
-      const scrollSpeed = 0.8;
-
-      const step = () => {
-        if (!isPaused && container.scrollWidth > container.clientWidth) {
-          const maxScrollLeft = container.scrollWidth - container.clientWidth;
-          const next = container.scrollLeft + scrollSpeed;
-          container.scrollLeft = next >= maxScrollLeft ? 0 : next;
-        }
-        animationId = requestAnimationFrame(step);
-      };
-
-      animationId = requestAnimationFrame(step);
-
-      const pause = () => {
-        isPaused = true;
-      };
-
-      const resume = () => {
-        isPaused = false;
-      };
-
-      container.addEventListener("mouseenter", pause);
-      container.addEventListener("mouseleave", resume);
-      container.addEventListener("touchstart", pause, { passive: true });
-      container.addEventListener("touchend", resume);
-      container.addEventListener("touchcancel", resume);
-      container.addEventListener("focusin", pause);
-      container.addEventListener("focusout", resume);
-
-      cleanups.push(() => {
-        container.removeEventListener("wheel", handleWheel);
-        container.removeEventListener("mouseenter", pause);
-        container.removeEventListener("mouseleave", resume);
-        container.removeEventListener("touchstart", pause);
-        container.removeEventListener("touchend", resume);
-        container.removeEventListener("touchcancel", resume);
-        container.removeEventListener("focusin", pause);
-        container.removeEventListener("focusout", resume);
-        cancelAnimationFrame(animationId);
-      });
-    });
-
-    return () => {
-      cleanups.forEach((cleanup) => cleanup());
-    };
-  }, [sliderRefs.trainings, sliderRefs.tutorials, sliderRefs.library]);
+  // AutoSlider component now handles all sliding functionality
 
   useEffect(() => {
     const fetchHadith = async () => {
@@ -720,56 +649,54 @@ const LandingPage = () => {
                 <p className="text-muted-foreground">No training programs available yet</p>
               </Card>
             ) : (
-              <div ref={sliderRefs.trainings} className="overflow-x-auto">
-                <div className="flex gap-6 snap-x snap-mandatory pb-4">
-                  {upcomingTrainings.map((training) => (
-                    <SpotlightCard
-                      key={training.id}
-                      className="p-6 w-[340px] sm:w-[360px] flex-shrink-0 bg-slate-900/70"
-                    >
-                      {training.imageUrl ? (
-                        <img
-                          src={training.imageUrl}
-                          alt={training.title}
-                          className="w-full h-48 object-cover rounded-lg mb-4"
-                          onError={(e) => {
-                            console.error("Failed to load training image:", training.imageUrl);
-                            e.currentTarget.style.display = 'none';
-                          }}
-                          onLoad={() => console.log("Training image loaded:", training.imageUrl)}
-                        />
-                      ) : (
-                        <div className="text-5xl mb-4">{getTrainingEmoji(training.category)}</div>
-                      )}
-                      <h3 className="text-xl font-bold mb-2">{training.title}</h3>
-                      <div className="space-y-2 text-sm text-muted-foreground mb-4">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4" />
-                          <span>{formatDate(training.startDate)}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <GraduationCap className="w-4 h-4" />
-                          <span>{training.trainer}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4" />
-                          <span>{training.enrolledParticipants || 0} participants</span>
-                        </div>
+              <AutoSlider minItemsToSlide={1} speed={20} pauseOnHover={true}>
+                {upcomingTrainings.map((training) => (
+                  <SpotlightCard
+                    key={training.id}
+                    className="p-6 w-[340px] sm:w-[360px] flex-shrink-0 bg-slate-900/70"
+                  >
+                    {training.imageUrl ? (
+                      <img
+                        src={training.imageUrl}
+                        alt={training.title}
+                        className="w-full h-48 object-cover rounded-lg mb-4"
+                        onError={(e) => {
+                          console.error("Failed to load training image:", training.imageUrl);
+                          e.currentTarget.style.display = 'none';
+                        }}
+                        onLoad={() => console.log("Training image loaded:", training.imageUrl)}
+                      />
+                    ) : (
+                      <div className="text-5xl mb-4">{getTrainingEmoji(training.category)}</div>
+                    )}
+                    <h3 className="text-xl font-bold mb-2">{training.title}</h3>
+                    <div className="space-y-2 text-sm text-muted-foreground mb-4">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        <span>{formatDate(training.startDate)}</span>
                       </div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500 mb-3">
-                        Prepare for registration
-                      </p>
-                      <Button
-                        className="w-full rounded-full"
-                        size="sm"
-                        onClick={() => navigate(`/trainings/${training.id}/register`)}
-                      >
-                        Register Now
-                      </Button>
-                    </SpotlightCard>
-                  ))}
-                </div>
-              </div>
+                      <div className="flex items-center gap-2">
+                        <GraduationCap className="w-4 h-4" />
+                        <span>{training.trainer}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        <span>{training.enrolledParticipants || 0} participants</span>
+                      </div>
+                    </div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500 mb-3">
+                      Prepare for registration
+                    </p>
+                    <Button
+                      className="w-full rounded-full"
+                      size="sm"
+                      onClick={() => navigate(`/trainings/${training.id}/register`)}
+                    >
+                      Register Now
+                    </Button>
+                  </SpotlightCard>
+                ))}
+              </AutoSlider>
             )}
           </div>
 
@@ -792,60 +719,58 @@ const LandingPage = () => {
                 <p className="text-muted-foreground">No tutorial sessions available yet</p>
               </Card>
             ) : (
-              <div ref={sliderRefs.tutorials} className="overflow-x-auto">
-                <div className="flex gap-6 snap-x snap-mandatory pb-4">
-                  {activeTutorials.map((tutorial) => (
-                    <SpotlightCard
-                      key={tutorial.id}
-                      className="p-6 w-[340px] sm:w-[360px] flex-shrink-0 bg-slate-900/70"
+              <AutoSlider minItemsToSlide={1} speed={20} pauseOnHover={true}>
+                {activeTutorials.map((tutorial) => (
+                  <SpotlightCard
+                    key={tutorial.id}
+                    className="p-6 w-[340px] sm:w-[360px] flex-shrink-0 bg-slate-900/70"
+                  >
+                    {tutorial.imageUrl && (
+                      <img
+                        src={tutorial.imageUrl}
+                        alt={tutorial.title}
+                        className="w-full h-48 object-cover rounded-lg mb-4"
+                        onError={(e) => {
+                          console.error("Failed to load tutorial image:", tutorial.imageUrl);
+                          e.currentTarget.style.display = 'none';
+                        }}
+                        onLoad={() => console.log("Tutorial image loaded:", tutorial.imageUrl)}
+                      />
+                    )}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+                        <GraduationCap className="w-6 h-6 text-white" />
+                      </div>
+                      <span className="text-xs bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
+                        {tutorial.status || "Active"}
+                      </span>
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">{tutorial.title}</h3>
+                    <p className="text-sm text-muted-foreground mb-3">{tutorial.subject}</p>
+                    <div className="space-y-2 text-sm mb-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Tutor:</span>
+                        <span className="font-medium">{tutorial.tutor}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Students:</span>
+                        <span className="font-medium">{tutorial.enrolledStudents || 0}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-2">
+                        {tutorial.location || "TBA"}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-full"
+                      size="sm"
+                      onClick={() => navigate(`/tutorials/${tutorial.id}/register`)}
                     >
-                      {tutorial.imageUrl && (
-                        <img
-                          src={tutorial.imageUrl}
-                          alt={tutorial.title}
-                          className="w-full h-48 object-cover rounded-lg mb-4"
-                          onError={(e) => {
-                            console.error("Failed to load tutorial image:", tutorial.imageUrl);
-                            e.currentTarget.style.display = 'none';
-                          }}
-                          onLoad={() => console.log("Tutorial image loaded:", tutorial.imageUrl)}
-                        />
-                      )}
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
-                          <GraduationCap className="w-6 h-6 text-white" />
-                        </div>
-                        <span className="text-xs bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
-                          {tutorial.status || "Active"}
-                        </span>
-                      </div>
-                      <h3 className="text-xl font-bold mb-2">{tutorial.title}</h3>
-                      <p className="text-sm text-muted-foreground mb-3">{tutorial.subject}</p>
-                      <div className="space-y-2 text-sm mb-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Tutor:</span>
-                          <span className="font-medium">{tutorial.tutor}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Students:</span>
-                          <span className="font-medium">{tutorial.enrolledStudents || 0}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-2">
-                          {tutorial.location || "TBA"}
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        className="w-full rounded-full"
-                        size="sm"
-                        onClick={() => navigate(`/tutorials/${tutorial.id}/register`)}
-                      >
-                        Join Session
-                      </Button>
-                    </SpotlightCard>
-                  ))}
-                </div>
-              </div>
+                      Join Session
+                    </Button>
+                  </SpotlightCard>
+                ))}
+              </AutoSlider>
             )}
           </div>
 
@@ -868,98 +793,96 @@ const LandingPage = () => {
                 <p className="text-muted-foreground">No library resources available yet</p>
               </Card>
             ) : (
-              <div ref={sliderRefs.library} className="overflow-x-auto">
-                <div className="flex gap-6 snap-x snap-mandatory pb-4">
-                  {latestLibraryUploads.map((book) => {
-                    // Check if this is a new classified resource or old library resource
-                    const isClassifiedResource = book.placement !== undefined;
-                    const resourceUrl = isClassifiedResource ? book.file?.url : book.imageUrl;
-                    const resourceDate = isClassifiedResource ? book.createdAt : book.addedAt;
-                    
-                    return (
-                      <SpotlightCard
-                        key={book.id}
-                        className="p-6 w-[340px] sm:w-[360px] flex-shrink-0 bg-slate-900/70"
-                      >
-                        <div className="flex items-start gap-4 mb-4">
-                          {resourceUrl ? (
-                            <img
-                              src={resourceUrl}
-                              alt={book.title}
-                              className="w-16 h-24 object-cover rounded-lg flex-shrink-0"
-                              onError={(e) => {
-                                console.error("Failed to load image:", resourceUrl);
-                                e.currentTarget.style.display = 'none';
-                              }}
-                            />
-                          ) : (
-                            <div className="w-16 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <BookOpen className="w-8 h-8 text-white" />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-bold mb-1 line-clamp-2">{book.title}</h3>
-                            {isClassifiedResource ? (
-                              <p className="text-sm text-muted-foreground line-clamp-1">
-                                {book.description || "Resource"}
-                              </p>
-                            ) : (
-                              <p className="text-sm text-muted-foreground">{book.author}</p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="space-y-2 text-sm mb-4">
-                          {!isClassifiedResource && (
-                            <>
-                              <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">Category:</span>
-                                <span className="font-medium">{book.category}</span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">Copies:</span>
-                                <span className="font-medium">{book.available || 0}/{book.copies || 0}</span>
-                              </div>
-                            </>
-                          )}
-                          {isClassifiedResource && book.tags && book.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {book.tags.slice(0, 3).map((tag: string, i: number) => (
-                                <span key={i} className="text-xs bg-primary/20 text-primary px-2 py-1 rounded">
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          <div className="text-xs text-muted-foreground">
-                            Added {getTimeAgo(resourceDate)}
-                          </div>
-                        </div>
-                        {isClassifiedResource ? (
-                          <Button
-                            variant="outline"
-                            className="w-full rounded-full"
-                            size="sm"
-                            asChild
-                          >
-                            <a href={book.file?.url} target="_blank" rel="noopener noreferrer">
-                              Download Resource
-                            </a>
-                          </Button>
+              <AutoSlider minItemsToSlide={1} speed={20} pauseOnHover={true}>
+                {latestLibraryUploads.map((book) => {
+                  // Check if this is a new classified resource or old library resource
+                  const isClassifiedResource = book.placement !== undefined;
+                  const resourceUrl = isClassifiedResource ? book.file?.url : book.imageUrl;
+                  const resourceDate = isClassifiedResource ? book.createdAt : book.addedAt;
+                  
+                  return (
+                    <SpotlightCard
+                      key={book.id}
+                      className="p-6 w-[340px] sm:w-[360px] flex-shrink-0 bg-slate-900/70"
+                    >
+                      <div className="flex items-start gap-4 mb-4">
+                        {resourceUrl ? (
+                          <img
+                            src={resourceUrl}
+                            alt={book.title}
+                            className="w-16 h-24 object-cover rounded-lg flex-shrink-0"
+                            onError={(e) => {
+                              console.error("Failed to load image:", resourceUrl);
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
                         ) : (
-                          <Button
-                            variant="outline"
-                            className="w-full rounded-full"
-                            size="sm"
-                            onClick={() => setSelectedLibraryResource(book)}
-                          >
-                            View Details
-                          </Button>
+                          <div className="w-16 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <BookOpen className="w-8 h-8 text-white" />
+                          </div>
                         )}
-                      </SpotlightCard>
-                    );
-                  })}
-                </div>
-              </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold mb-1 line-clamp-2">{book.title}</h3>
+                          {isClassifiedResource ? (
+                            <p className="text-sm text-muted-foreground line-clamp-1">
+                              {book.description || "Resource"}
+                            </p>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">{book.author}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="space-y-2 text-sm mb-4">
+                        {!isClassifiedResource && (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Category:</span>
+                              <span className="font-medium">{book.category}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Copies:</span>
+                              <span className="font-medium">{book.available || 0}/{book.copies || 0}</span>
+                            </div>
+                          </>
+                        )}
+                        {isClassifiedResource && book.tags && book.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {book.tags.slice(0, 3).map((tag: string, i: number) => (
+                              <span key={i} className="text-xs bg-primary/20 text-primary px-2 py-1 rounded">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="text-xs text-muted-foreground">
+                          Added {getTimeAgo(resourceDate)}
+                        </div>
+                      </div>
+                      {isClassifiedResource ? (
+                        <Button
+                          variant="outline"
+                          className="w-full rounded-full"
+                          size="sm"
+                          asChild
+                        >
+                          <a href={book.file?.url} target="_blank" rel="noopener noreferrer">
+                            Download Resource
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          className="w-full rounded-full"
+                          size="sm"
+                          onClick={() => setSelectedLibraryResource(book)}
+                        >
+                          View Details
+                        </Button>
+                      )}
+                    </SpotlightCard>
+                  );
+                })}
+              </AutoSlider>
             )}
           </div>
         </div>
