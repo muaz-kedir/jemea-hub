@@ -6,6 +6,7 @@ import uploadRoute from './routes/uploadRoute.js';
 import notificationRoute from './routes/notificationRoute.js';
 import resourceRoute from './routes/resourceRoute.js';
 import aiRoute from './routes/aiRoute.js';
+import openrouterRoute from './routes/openrouterRoute.js';
 // Load environment variables
 dotenv.config();
 
@@ -72,6 +73,7 @@ app.use('/api', uploadRoute);
 app.use('/api', notificationRoute);
 app.use('/api', resourceRoute);
 app.use('/api', aiRoute);
+app.use('/api', openrouterRoute);
 
 // 404 handler
 app.use((req, res) => {

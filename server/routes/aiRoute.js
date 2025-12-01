@@ -1,7 +1,8 @@
 import express from 'express';
 import pdfParse from 'pdf-parse';
 import fetch from 'node-fetch';
-import genAI from '../services/geminiClient.js';
+import { chatCompletions } from '../services/openrouterClient.js';
+
 import { admin, firestore } from '../config/firebaseAdmin.js';
 
 const router = express.Router();
@@ -15,6 +16,23 @@ const ensureFirestoreConfigured = (res) => {
     return false;
   }
   return true;
+};
+
+const generateText = async (prompt) => {
+  const model = (process.env.OPENROUTER_DEFAULT_MODEL || 'openrouter/auto').trim();
+  const response = await chatCompletions({
+    model,
+    messages: [
+      { role: 'user', content: prompt },
+    ],
+  });
+  const text = response?.choices?.[0]?.message?.content || '';
+  if (!text) {
+    const error = new Error('AI did not return content.');
+    error.status = 502;
+    throw error;
+  }
+  return text;
 };
 
 const loadResourceAndText = async (id) => {
@@ -114,7 +132,7 @@ const extractJson = (text) => {
     }
   }
 
-  throw new Error('Gemini did not return valid JSON.');
+  throw new Error('AI did not return valid JSON.');
 };
 
 router.get('/resources/:id/ai', async (req, res) => {
@@ -169,10 +187,7 @@ Return ONLY valid JSON in this exact shape:
 Resource content starts below:
 --------------------\n${trimmedText}`;
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const text = await generateText(prompt);
 
     const summaryJson = extractJson(text);
 
@@ -184,7 +199,7 @@ Resource content starts below:
       : '';
 
     if (!summaryShort && !summaryLong) {
-      throw new Error('Gemini did not return summary content.');
+      throw new Error('AI did not return summary content.');
     }
 
     const aiDocRef = firestore.collection('resource_ai_metadata').doc(id);
@@ -212,7 +227,7 @@ Resource content starts below:
     });
   } catch (err) {
     const status = err.status || 500;
-    console.error('❌ Gemini summary error:', err);
+    console.error('❌ AI summary error:', err);
     return res.status(status).json({ success: false, error: err.message || 'Failed to generate summary.' });
   }
 });
@@ -240,13 +255,9 @@ Return ONLY JSON in this exact structure:
 }
 
 Resource content starts below:
---------------------
-${trimmedText}`;
+--------------------\n${trimmedText}`;
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const text = await generateText(prompt);
 
     const flashcardJson = extractJson(text);
 
@@ -258,7 +269,7 @@ ${trimmedText}`;
     }
 
     if (!Array.isArray(rawFlashcards) || rawFlashcards.length === 0) {
-      throw new Error('Gemini did not return flashcards.');
+      throw new Error('AI did not return flashcards.');
     }
 
     const flashcards = rawFlashcards
@@ -280,7 +291,7 @@ ${trimmedText}`;
       .slice(0, 40);
 
     if (flashcards.length === 0) {
-      throw new Error('Gemini did not return valid flashcards.');
+      throw new Error('AI did not return valid flashcards.');
     }
 
     const aiDocRef = firestore.collection('resource_ai_metadata').doc(id);
@@ -307,7 +318,7 @@ ${trimmedText}`;
     });
   } catch (err) {
     const status = err.status || 500;
-    console.error('❌ Gemini flashcards error:', err);
+    console.error('❌ AI flashcards error:', err);
     return res.status(status).json({ success: false, error: err.message || 'Failed to generate flashcards.' });
   }
 });
