@@ -97,6 +97,22 @@ const LandingPage = () => {
   const buttonsRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
 
+  // Smooth scroll handler for nav links
+  const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, sectionId: string) => {
+    e.preventDefault();
+    const element = document.getElementById(sectionId);
+    if (element) {
+      const navbarHeight = 64; // Height of the sticky navbar
+      const elementPosition = element.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({
+        top: elementPosition - navbarHeight,
+        behavior: 'smooth'
+      });
+      // Close mobile menu if open
+      setMobileMenuOpen(false);
+    }
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -409,16 +425,16 @@ const LandingPage = () => {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-8">
-              <a href="#about" className="text-sm font-medium text-slate-200 hover:text-white transition-colors">
+              <a href="#about" onClick={(e) => scrollToSection(e, 'about')} className="text-sm font-medium text-slate-200 hover:text-white transition-colors cursor-pointer">
                 About
               </a>
-              <a href="#mission" className="text-sm font-medium text-slate-200 hover:text-white transition-colors">
+              <a href="#mission" onClick={(e) => scrollToSection(e, 'mission')} className="text-sm font-medium text-slate-200 hover:text-white transition-colors cursor-pointer">
                 Mission
               </a>
-              <a href="#vision" className="text-sm font-medium text-slate-200 hover:text-white transition-colors">
+              <a href="#vision" onClick={(e) => scrollToSection(e, 'vision')} className="text-sm font-medium text-slate-200 hover:text-white transition-colors cursor-pointer">
                 Vision
               </a>
-              <a href="#goals" className="text-sm font-medium text-slate-200 hover:text-white transition-colors">
+              <a href="#goals" onClick={(e) => scrollToSection(e, 'goals')} className="text-sm font-medium text-slate-200 hover:text-white transition-colors cursor-pointer">
                 Goals
               </a>
             </div>
@@ -456,16 +472,16 @@ const LandingPage = () => {
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-slate-800 bg-slate-950">
             <div className="px-4 py-4 space-y-3">
-              <a href="#about" className="block py-2 text-sm font-medium text-slate-200 hover:text-white">
+              <a href="#about" onClick={(e) => scrollToSection(e, 'about')} className="block py-2 text-sm font-medium text-slate-200 hover:text-white cursor-pointer">
                 About
               </a>
-              <a href="#mission" className="block py-2 text-sm font-medium text-slate-200 hover:text-white">
+              <a href="#mission" onClick={(e) => scrollToSection(e, 'mission')} className="block py-2 text-sm font-medium text-slate-200 hover:text-white cursor-pointer">
                 Mission
               </a>
-              <a href="#vision" className="block py-2 text-sm font-medium text-slate-200 hover:text-white">
+              <a href="#vision" onClick={(e) => scrollToSection(e, 'vision')} className="block py-2 text-sm font-medium text-slate-200 hover:text-white cursor-pointer">
                 Vision
               </a>
-              <a href="#goals" className="block py-2 text-sm font-medium text-slate-200 hover:text-white">
+              <a href="#goals" onClick={(e) => scrollToSection(e, 'goals')} className="block py-2 text-sm font-medium text-slate-200 hover:text-white cursor-pointer">
                 Goals
               </a>
               <div className="flex gap-3 pt-3 border-t">
@@ -979,7 +995,7 @@ const LandingPage = () => {
         </DialogContent>
       </Dialog>
       {/* Sectors Navigation */}
-      <section id="sectors" className="py-16 bg-secondary/30">
+      <section id="sectors" className="py-16 bg-secondary/30 scroll-mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Explore Our Sectors</h2>
@@ -1017,7 +1033,7 @@ const LandingPage = () => {
       </section>
 
       {/* About Section */}
-      <section id="about" className="py-16 bg-background">
+      <section id="about" className="py-16 bg-background scroll-mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
@@ -1068,7 +1084,7 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-8">
             {/* Mission */}
-            <Card id="mission" className="p-8 border-0 shadow-lg">
+            <Card id="mission" className="p-8 border-0 shadow-lg scroll-mt-20">
               <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6">
                 <Target className="w-7 h-7 text-white" />
               </div>
@@ -1081,7 +1097,7 @@ const LandingPage = () => {
             </Card>
 
             {/* Vision */}
-            <Card id="vision" className="p-8 border-0 shadow-lg">
+            <Card id="vision" className="p-8 border-0 shadow-lg scroll-mt-20">
               <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6">
                 <Eye className="w-7 h-7 text-white" />
               </div>
@@ -1094,7 +1110,7 @@ const LandingPage = () => {
             </Card>
 
             {/* Goals */}
-            <Card id="goals" className="p-8 border-0 shadow-lg">
+            <Card id="goals" className="p-8 border-0 shadow-lg scroll-mt-20">
               <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-6">
                 <Heart className="w-7 h-7 text-white" />
               </div>
