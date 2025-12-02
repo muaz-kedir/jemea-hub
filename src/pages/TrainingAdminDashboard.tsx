@@ -24,11 +24,11 @@ import {
   Calendar,
   Clock,
   Search,
-  TrendingUp,
-  Target
+  TrendingUp
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { TrainingAnalytics } from "@/components/TrainingAnalytics";
 import { db } from "@/lib/firebase";
+import { notifyNewTraining, notifyTrainingUpdate } from "@/services/notificationService";
 import { 
   collection, 
   getDocs, 
@@ -214,12 +214,16 @@ const TrainingAdminDashboard = () => {
 
       if (editingTraining) {
         await updateDoc(doc(db, "trainings", editingTraining.id), trainingData);
+        // Send notification for training update
+        await notifyTrainingUpdate(formData.title).catch(console.error);
         toast({
           title: "Success",
           description: "Training program updated successfully",
         });
       } else {
         await addDoc(collection(db, "trainings"), trainingData);
+        // Send notification for new training
+        await notifyNewTraining(formData.title).catch(console.error);
         toast({
           title: "Success",
           description: "Training program created successfully",
@@ -657,6 +661,9 @@ const TrainingAdminDashboard = () => {
             </form>
           </Card>
         )}
+
+        {/* Analytics Section */}
+        <TrainingAnalytics />
 
         {/* Search */}
         <div className="relative">

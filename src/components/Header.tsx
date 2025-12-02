@@ -1,5 +1,6 @@
-import { Bell, Search, User } from "lucide-react";
+import { Search, User } from "lucide-react";
 import { Button } from "./ui/button";
+import { NotificationBell } from "./notifications";
 
 export const Header = () => {
   return (
@@ -17,10 +18,7 @@ export const Header = () => {
         <Button variant="ghost" size="icon" className="rounded-2xl">
           <Search className="w-5 h-5" />
         </Button>
-        <Button variant="ghost" size="icon" className="rounded-2xl relative">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-accent rounded-full" />
-        </Button>
+        <NotificationBell />
       </div>
     </header>
   );

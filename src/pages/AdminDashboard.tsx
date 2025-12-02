@@ -1,5 +1,6 @@
 import { AdminLayout } from "@/components/AdminLayout";
 import { UserManagement } from "@/components/UserManagement";
+import { AnalyticsSection } from "@/components/AnalyticsSection";
 import { Link } from "react-router-dom";
 import { 
   Library, 
@@ -171,19 +172,25 @@ const AdminDashboard = () => {
     <AdminLayout>
       <div className="p-6 space-y-6">
         {/* Welcome Section */}
-        <div className="bg-gradient-to-r from-primary to-primary/80 rounded-3xl p-6 text-white shadow-lg">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-              <Shield className="w-6 h-6" />
+        <div className="relative overflow-hidden rounded-3xl p-6 text-white shadow-xl" style={{
+          background: 'linear-gradient(135deg, #1e1e2f 0%, #2d2d44 50%, #1a2a6c 100%)'
+        }}>
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl"></div>
+          
+          <div className="relative flex items-center gap-4 mb-3">
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <Shield className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Super Admin Dashboard</h1>
-              <p className="text-white/90 text-sm">
+              <h1 className="text-2xl font-bold tracking-tight">Super Admin Dashboard</h1>
+              <p className="text-blue-200 text-sm">
                 Welcome back, {userProfile?.firstName || "Admin"}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 mt-4 text-sm text-white/80">
+          <div className="relative flex items-center gap-2 mt-4 text-sm text-slate-300">
             <Clock className="w-4 h-4" />
             <span>Last login: {new Date().toLocaleDateString()}</span>
           </div>
@@ -282,6 +289,9 @@ const AdminDashboard = () => {
                 </div>
               </div>
             </Card>
+
+            {/* Analytics Section */}
+            <AnalyticsSection />
           </TabsContent>
           
           {/* Dashboards Tab */}

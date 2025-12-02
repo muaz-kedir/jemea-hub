@@ -47,13 +47,19 @@ service cloud.firestore {
                     && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid', 'email']);
     }
     
-    // User roles collection - READ for authenticated users, WRITE only for super_admin
-    // This allows super_admin to assign roles through the app
-    // TEMPORARY: Allow authenticated users to create their own role during initial setup
+    // User roles collection - READ for authenticated users, WRITE for admins
+    // Allow admin emails to create/update their own role on first login
     match /user_roles/{userId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && request.auth.uid == userId; // Allow self-creation during setup
-      allow update: if isSuperAdmin(); // Only super_admin can update roles
+      // Allow create/update for own document if user is an admin email OR super_admin
+      allow create, update: if request.auth != null && request.auth.uid == userId && (
+        request.auth.token.email.lower() == 'libraryhumsj@gmail.com' ||
+        request.auth.token.email.lower() == 'tutorialhumsj@gmail.com' ||
+        request.auth.token.email.lower() == 'traininghumsj@gmail.com' ||
+        isSuperAdmin()
+      );
+      // Super admin can update any user's role
+      allow update: if isSuperAdmin();
       allow delete: if false; // Prevent role deletion
     }
     
@@ -107,6 +113,19 @@ service cloud.firestore {
       allow read: if isLibraryAdmin() || isSuperAdmin() || 
                     (request.auth != null && resource.data.email == request.auth.token.email);
       allow update, delete: if isLibraryAdmin() || isSuperAdmin();
+    }
+
+    // Notifications collection - real-time notifications for all users
+    match /notifications/{notificationId} {
+      // All authenticated users can read notifications
+      allow read: if request.auth != null;
+      // Only admins can create notifications
+      allow create: if isAnyAdmin();
+      // Users can update to mark as read (add their uid to readBy array)
+      allow update: if request.auth != null && 
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']);
+      // Only super admin can delete notifications
+      allow delete: if isSuperAdmin();
     }
 
     // Classified resources collection (landing + academic files managed via backend)

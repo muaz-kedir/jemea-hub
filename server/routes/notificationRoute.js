@@ -1,5 +1,6 @@
 import express from 'express';
 import nodemailer from 'nodemailer';
+import { createAndBroadcastNotification, broadcastNotification } from '../services/emailNotificationService.js';
 
 const router = express.Router();
 
@@ -34,6 +35,59 @@ if (missingVars.length === 0) {
     `⚠️  SMTP configuration incomplete. Missing: ${missingVars.join(', ')}. Email notifications will be disabled.`
   );
 }
+
+/**
+ * POST /api/notify/broadcast
+ * Broadcast a notification to all registered users via email
+ * Body: { type, title, message, link?, sendEmail? }
+ */
+router.post('/notify/broadcast', async (req, res) => {
+  const { type, title, message, link, sendEmail = true } = req.body || {};
+
+  if (!type || !title || !message) {
+    return res.status(400).json({
+      success: false,
+      error: 'type, title, and message are required.',
+    });
+  }
+
+  const validTypes = ['library', 'training', 'tutorial', 'system'];
+  if (!validTypes.includes(type)) {
+    return res.status(400).json({
+      success: false,
+      error: `Invalid type. Must be one of: ${validTypes.join(', ')}`,
+    });
+  }
+
+  try {
+    const result = await createAndBroadcastNotification({
+      type,
+      title,
+      message,
+      link,
+      sendEmail,
+    });
+
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        notificationId: result.notificationId,
+        emailsSent: result.emailsSent,
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error,
+      });
+    }
+  } catch (error) {
+    console.error('❌ Broadcast notification error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to broadcast notification.',
+    });
+  }
+});
 
 router.post('/notify/registration', async (req, res) => {
   if (!transporter) {

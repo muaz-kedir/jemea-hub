@@ -38,6 +38,7 @@ import {
 } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LibraryAnalytics } from "@/components/LibraryAnalytics";
 import { ResourceAdminPanel } from "@/components/ResourceAdminPanel";
 import { CourseManagement } from "@/components/CourseManagement";
 
@@ -431,6 +432,9 @@ const LibraryAdminDashboard = () => {
             </div>
           </Card>
         </div>
+
+        {/* Library Analytics */}
+        <LibraryAnalytics />
 
         {/* Add/Edit Form */}
         {isAddingResource && (

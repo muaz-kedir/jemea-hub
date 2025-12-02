@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 
 import { AdminLayout } from "@/components/AdminLayout";
+import { TutorialAnalytics } from "@/components/TutorialAnalytics";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 
 import { db } from "@/lib/firebase";
+import { notifyNewTutorial, notifyTutorialUpdate } from "@/services/notificationService";
 import {
   Timestamp,
   addDoc,
@@ -208,12 +209,16 @@ const TutorialAdminDashboard = () => {
 
       if (editingSession) {
         await updateDoc(doc(db, "tutorial_sessions", editingSession.id), sessionData);
+        // Send notification for tutorial update
+        await notifyTutorialUpdate(formData.title).catch(console.error);
         toast({
           title: "Success",
           description: "Session updated successfully",
         });
       } else {
         await addDoc(collection(db, "tutorial_sessions"), sessionData);
+        // Send notification for new tutorial
+        await notifyNewTutorial(formData.title).catch(console.error);
         toast({
           title: "Success",
           description: "Session created successfully",
@@ -609,6 +614,9 @@ const TutorialAdminDashboard = () => {
             </form>
           </Card>
         )}
+
+        {/* Analytics Section */}
+        <TutorialAnalytics />
 
         {/* Search */}
         <div className="relative">

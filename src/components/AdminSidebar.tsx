@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
+import { NotificationBell } from "./notifications";
 
 interface SidebarItem {
   title: string;
@@ -112,6 +113,7 @@ export const AdminSidebar = () => {
               {getRoleDisplayName(currentRole as UserRole)}
             </p>
           </div>
+          <NotificationBell />
         </div>
       </div>
 
