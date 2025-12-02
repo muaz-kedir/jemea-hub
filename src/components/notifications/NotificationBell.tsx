@@ -50,25 +50,33 @@ const getTypeGradient = (type: NotificationType) => {
 
 export const NotificationBell = () => {
   const navigate = useNavigate();
-  const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { notifications, unreadCount, markAsRead, markAllAsRead, loading } = useNotifications();
+  const { 
+    notifications, 
+    unreadCount, 
+    markAsRead, 
+    markAllAsRead, 
+    loading,
+    isBellOpen,
+    toggleBell,
+    closeBell 
+  } = useNotifications();
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        closeBell();
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [closeBell]);
 
   const handleNotificationClick = async (notification: typeof notifications[0]) => {
     await markAsRead(notification.id);
-    setIsOpen(false);
+    closeBell();
     
     // Navigate to the related page
     if (notification.link) {
@@ -100,11 +108,11 @@ export const NotificationBell = () => {
         variant="ghost"
         size="icon"
         className="relative rounded-xl hover:bg-slate-800/50 transition-all duration-200"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggleBell}
       >
         <Bell className={cn(
           "w-5 h-5 transition-all duration-200",
-          isOpen && "text-primary"
+          isBellOpen && "text-primary"
         )} />
         
         {/* Unread Badge */}
@@ -119,7 +127,7 @@ export const NotificationBell = () => {
       </Button>
 
       {/* Dropdown Panel */}
-      {isOpen && (
+      {isBellOpen && (
         <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200">
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700/50 rounded-xl shadow-2xl shadow-black/20 overflow-hidden">
             {/* Header */}
@@ -221,7 +229,7 @@ export const NotificationBell = () => {
                   variant="ghost"
                   className="w-full text-xs text-muted-foreground hover:text-primary h-8"
                   onClick={() => {
-                    setIsOpen(false);
+                    closeBell();
                     navigate("/notifications");
                   }}
                 >

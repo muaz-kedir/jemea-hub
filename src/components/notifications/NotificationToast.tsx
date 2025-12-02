@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, BookOpen, Award, GraduationCap, Settings, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useNotifications, NotificationType, Notification } from "@/contexts/NotificationContext";
+import { useNotifications, NotificationType } from "@/contexts/NotificationContext";
 import { cn } from "@/lib/utils";
+import { playNotificationSound } from "@/utils/notificationSound";
 
 const getTypeIcon = (type: NotificationType) => {
   switch (type) {
@@ -46,7 +47,7 @@ const getTypeBorderColor = (type: NotificationType) => {
 
 export const NotificationToast = () => {
   const navigate = useNavigate();
-  const { latestNotification, clearLatest, markAsRead } = useNotifications();
+  const { latestNotification, clearLatest, markAsRead, openBell } = useNotifications();
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
 
@@ -54,6 +55,9 @@ export const NotificationToast = () => {
     if (latestNotification) {
       setIsVisible(true);
       setIsExiting(false);
+      
+      // Play notification sound
+      playNotificationSound();
 
       // Auto-dismiss after 5 seconds
       const timer = setTimeout(() => {
@@ -75,27 +79,16 @@ export const NotificationToast = () => {
   const handleClick = async () => {
     if (!latestNotification) return;
     
-    await markAsRead(latestNotification.id);
+    // Dismiss the toast first
     handleDismiss();
     
-    // Navigate to the related page
-    if (latestNotification.link) {
-      navigate(latestNotification.link);
-    } else {
-      switch (latestNotification.type) {
-        case "library":
-          navigate("/digital-library");
-          break;
-        case "training":
-          navigate("/landing#trainings");
-          break;
-        case "tutorial":
-          navigate("/landing#tutorials");
-          break;
-        default:
-          navigate("/notifications");
-      }
-    }
+    // Open the notification bell dropdown
+    openBell();
+  };
+
+  const handleViewAll = () => {
+    handleDismiss();
+    navigate("/notifications");
   };
 
   if (!isVisible || !latestNotification) return null;
@@ -161,16 +154,26 @@ export const NotificationToast = () => {
                   {latestNotification.message}
                 </p>
                 
-                {/* View Button */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2 h-7 px-2 text-xs text-primary hover:text-primary hover:bg-primary/10 group"
-                  onClick={handleClick}
-                >
-                  View details
-                  <ArrowRight className="w-3 h-3 ml-1 transition-transform group-hover:translate-x-0.5" />
-                </Button>
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2 mt-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs text-primary hover:text-primary hover:bg-primary/10 group"
+                    onClick={handleClick}
+                  >
+                    Open notifications
+                    <ArrowRight className="w-3 h-3 ml-1 transition-transform group-hover:translate-x-0.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs text-muted-foreground hover:text-white"
+                    onClick={handleViewAll}
+                  >
+                    View all
+                  </Button>
+                </div>
               </div>
 
               {/* Close Button */}

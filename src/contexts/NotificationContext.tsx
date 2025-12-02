@@ -38,6 +38,11 @@ interface NotificationContextType {
   markAllAsRead: () => Promise<void>;
   latestNotification: Notification | null;
   clearLatest: () => void;
+  // Bell dropdown control
+  isBellOpen: boolean;
+  openBell: () => void;
+  closeBell: () => void;
+  toggleBell: () => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -60,6 +65,11 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
   const [loading, setLoading] = useState(true);
   const [latestNotification, setLatestNotification] = useState<Notification | null>(null);
   const [previousIds, setPreviousIds] = useState<Set<string>>(new Set());
+  const [isBellOpen, setIsBellOpen] = useState(false);
+
+  const openBell = useCallback(() => setIsBellOpen(true), []);
+  const closeBell = useCallback(() => setIsBellOpen(false), []);
+  const toggleBell = useCallback(() => setIsBellOpen(prev => !prev), []);
 
 
   // Subscribe to real-time notifications
@@ -182,6 +192,10 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
         markAllAsRead,
         latestNotification,
         clearLatest,
+        isBellOpen,
+        openBell,
+        closeBell,
+        toggleBell,
       }}
     >
       {children}
