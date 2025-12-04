@@ -117,11 +117,11 @@ service cloud.firestore {
 
     // Notifications collection - real-time notifications for all users
     match /notifications/{notificationId} {
-      // All authenticated users can read notifications
-      allow read: if request.auth != null;
-      // Only admins can create notifications
-      allow create: if isAnyAdmin();
-      // Users can update to mark as read (add their uid to readBy array)
+      // Anyone can read notifications (for real-time updates)
+      allow read: if true;
+      // Admins can create notifications
+      allow create: if request.auth != null && isAnyAdmin();
+      // Authenticated users can update to mark as read (add their uid to readBy array)
       allow update: if request.auth != null && 
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']);
       // Only super admin can delete notifications

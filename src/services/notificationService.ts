@@ -1,6 +1,8 @@
+import { db } from "@/lib/firebase";
+import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { NotificationType } from "@/contexts/NotificationContext";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 interface CreateNotificationParams {
   title: string;
@@ -23,38 +25,80 @@ interface NotificationResponse {
 }
 
 /**
- * Creates a new notification in Firestore AND broadcasts via email to all users
- * This will trigger real-time updates for all connected users
+ * Creates a notification directly in Firestore
+ * This is the fallback method that always works
  */
-export const createNotification = async (params: CreateNotificationParams): Promise<NotificationResponse> => {
+const createNotificationDirect = async (
+  params: CreateNotificationParams
+): Promise<NotificationResponse> => {
+  try {
+    const notificationData = {
+      title: params.title,
+      message: params.message,
+      type: params.type,
+      link: params.link || null,
+      metadata: params.metadata || {},
+      readBy: [],
+      createdAt: Timestamp.now(),
+    };
+
+    const docRef = await addDoc(
+      collection(db, "notifications"),
+      notificationData
+    );
+    console.log("[Notification] Created directly in Firestore:", docRef.id);
+
+    return {
+      success: true,
+      notificationId: docRef.id,
+      emailsSent: 0,
+    };
+  } catch (error) {
+    console.error("[Notification] Direct creation failed:", error);
+    return { success: false, error: String(error) };
+  }
+};
+
+/**
+ * Creates a new notification in Firestore AND broadcasts via email to all users
+ * Falls back to direct Firestore write if API is unavailable
+ */
+export const createNotification = async (
+  params: CreateNotificationParams
+): Promise<NotificationResponse> => {
+  // Try API first (for email broadcasting)
   try {
     const response = await fetch(`${API_URL}/api/notify/broadcast`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         type: params.type,
         title: params.title,
         message: params.message,
         link: params.link || null,
-        sendEmail: params.sendEmail !== false, // Default to true
+        sendEmail: params.sendEmail !== false,
       }),
     });
 
-    const data = await response.json();
-    
-    if (data.success) {
-      console.log(`Notification created: ${data.notificationId}, Emails sent: ${data.emailsSent}`);
-    } else {
-      console.error("Notification error:", data.error);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success) {
+        console.log(
+          `[Notification] Created via API: ${data.notificationId}, Emails: ${data.emailsSent}`
+        );
+        return data;
+      }
     }
-    
-    return data;
+
+    // API failed, fall back to direct Firestore
+    console.warn("[Notification] API failed, using direct Firestore write");
+    return createNotificationDirect(params);
   } catch (error) {
-    console.error("Error creating notification:", error);
-    // Return a failure response instead of throwing
-    return { success: false, error: String(error) };
+    // Network error, fall back to direct Firestore
+    console.warn("[Notification] API unreachable, using direct Firestore write");
+    return createNotificationDirect(params);
   }
 };
 
@@ -65,7 +109,7 @@ export const createNotification = async (params: CreateNotificationParams): Prom
 // Library notifications
 export const notifyNewBook = async (bookTitle: string, adminName?: string) => {
   return createNotification({
-    title: "New Book Added",
+    title: "📚 New Book Added",
     message: `"${bookTitle}" has been added to the digital library.`,
     type: "library",
     link: "/digital-library",
@@ -73,9 +117,12 @@ export const notifyNewBook = async (bookTitle: string, adminName?: string) => {
   });
 };
 
-export const notifyBookUpdate = async (bookTitle: string, adminName?: string) => {
+export const notifyBookUpdate = async (
+  bookTitle: string,
+  adminName?: string
+) => {
   return createNotification({
-    title: "Book Updated",
+    title: "📚 Book Updated",
     message: `"${bookTitle}" has been updated in the library.`,
     type: "library",
     link: "/digital-library",
@@ -84,9 +131,12 @@ export const notifyBookUpdate = async (bookTitle: string, adminName?: string) =>
 };
 
 // Training notifications
-export const notifyNewTraining = async (trainingTitle: string, adminName?: string) => {
+export const notifyNewTraining = async (
+  trainingTitle: string,
+  adminName?: string
+) => {
   return createNotification({
-    title: "New Training Program",
+    title: "🎓 New Training Program",
     message: `"${trainingTitle}" is now available for registration.`,
     type: "training",
     link: "/landing#trainings",
@@ -94,9 +144,12 @@ export const notifyNewTraining = async (trainingTitle: string, adminName?: strin
   });
 };
 
-export const notifyTrainingUpdate = async (trainingTitle: string, adminName?: string) => {
+export const notifyTrainingUpdate = async (
+  trainingTitle: string,
+  adminName?: string
+) => {
   return createNotification({
-    title: "Training Updated",
+    title: "🎓 Training Updated",
     message: `"${trainingTitle}" has been updated. Check for new details.`,
     type: "training",
     link: "/landing#trainings",
@@ -105,9 +158,12 @@ export const notifyTrainingUpdate = async (trainingTitle: string, adminName?: st
 };
 
 // Tutorial notifications
-export const notifyNewTutorial = async (tutorialTitle: string, adminName?: string) => {
+export const notifyNewTutorial = async (
+  tutorialTitle: string,
+  adminName?: string
+) => {
   return createNotification({
-    title: "New Tutorial Session",
+    title: "📖 New Tutorial Session",
     message: `"${tutorialTitle}" is now available for enrollment.`,
     type: "tutorial",
     link: "/landing#tutorials",
@@ -115,9 +171,12 @@ export const notifyNewTutorial = async (tutorialTitle: string, adminName?: strin
   });
 };
 
-export const notifyTutorialUpdate = async (tutorialTitle: string, adminName?: string) => {
+export const notifyTutorialUpdate = async (
+  tutorialTitle: string,
+  adminName?: string
+) => {
   return createNotification({
-    title: "Tutorial Updated",
+    title: "📖 Tutorial Updated",
     message: `"${tutorialTitle}" has been updated with new information.`,
     type: "tutorial",
     link: "/landing#tutorials",
@@ -126,9 +185,12 @@ export const notifyTutorialUpdate = async (tutorialTitle: string, adminName?: st
 };
 
 // System notifications
-export const notifySystemAnnouncement = async (title: string, message: string) => {
+export const notifySystemAnnouncement = async (
+  title: string,
+  message: string
+) => {
   return createNotification({
-    title,
+    title: `🔔 ${title}`,
     message,
     type: "system",
     metadata: { action: "announcement" },

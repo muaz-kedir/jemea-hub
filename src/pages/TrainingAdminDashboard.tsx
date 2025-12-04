@@ -386,10 +386,23 @@ const TrainingAdminDashboard = () => {
             <h1 className="text-2xl font-bold">Training Dashboard</h1>
             <p className="text-sm text-muted-foreground">Manage training programs and participants</p>
           </div>
-          <Button onClick={() => setIsAddingTraining(true)} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Add Training
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={async () => {
+                const { notifyNewTraining } = await import("@/services/notificationService");
+                await notifyNewTraining("Test Training Notification");
+                toast({ title: "Test notification sent!" });
+              }}
+              className="gap-2"
+            >
+              🔔 Test Notification
+            </Button>
+            <Button onClick={() => setIsAddingTraining(true)} className="gap-2">
+              <Plus className="w-4 h-4" />
+              Add Training
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}

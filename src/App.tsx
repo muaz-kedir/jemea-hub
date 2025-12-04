@@ -8,6 +8,7 @@ import { NotificationProvider } from "./contexts/NotificationContext";
 import { AcademicStructureProvider } from "./context/AcademicStructureContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { NotificationToast } from "./components/notifications";
+import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 import Splash from "./pages/Splash";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
@@ -42,6 +43,7 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
               <NotificationToast />
+              <PWAInstallPrompt />
               <Routes>
                 <Route path="/" element={<Splash />} />
                 <Route path="/landing" element={<LandingPage />} />

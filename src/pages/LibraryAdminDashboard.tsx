@@ -36,6 +36,7 @@ import {
   doc,
   Timestamp 
 } from "firebase/firestore";
+import { notifyNewBook, notifyBookUpdate } from "@/services/notificationService";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LibraryAnalytics } from "@/components/LibraryAnalytics";
@@ -249,6 +250,8 @@ const LibraryAdminDashboard = () => {
       if (editingResource) {
         await updateDoc(doc(db, "library_resources", editingResource.id), resourceData);
         console.log("Resource updated in Firestore");
+        // Send notification for book update
+        await notifyBookUpdate(formData.title).catch(console.error);
         toast({
           title: "Success",
           description: "Resource updated successfully",
@@ -256,6 +259,8 @@ const LibraryAdminDashboard = () => {
       } else {
         const docRef = await addDoc(collection(db, "library_resources"), resourceData);
         console.log("Resource added to Firestore with ID:", docRef.id);
+        // Send notification for new book
+        await notifyNewBook(formData.title).catch(console.error);
         toast({
           title: "Success",
           description: "Resource added successfully",
@@ -354,6 +359,17 @@ const LibraryAdminDashboard = () => {
             <p className="text-sm text-muted-foreground">Manage library resources and books</p>
           </div>
           <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={async () => {
+                const { notifyNewBook } = await import("@/services/notificationService");
+                await notifyNewBook("Test Library Notification");
+                toast({ title: "Test notification sent!" });
+              }}
+              className="gap-2"
+            >
+              🔔 Test Notification
+            </Button>
             <Button onClick={() => setIsAddingResource(true)} className="gap-2">
               <Plus className="w-4 h-4" />
               Add Resource
