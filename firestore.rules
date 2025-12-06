@@ -38,29 +38,29 @@ service cloud.firestore {
       return isSuperAdmin() || isLibraryAdmin() || isTutorialAdmin() || isTrainingAdmin();
     }
     
-    // Users collection - users can read/update their own profile, super_admin can read all
-    // Role field is NOT stored here for security
-    match /users/{userId} {
-      allow read: if request.auth != null && (request.auth.uid == userId || isSuperAdmin());
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && request.auth.uid == userId
-                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid', 'email']);
-    }
-    
     // User roles collection - READ for authenticated users, WRITE for admins
     // Allow admin emails to create/update their own role on first login
     match /user_roles/{userId} {
       allow read: if request.auth != null;
-      // Allow create/update for own document if user is an admin email OR super_admin
+      // Allow create/update for own document if user is an admin email
       allow create, update: if request.auth != null && request.auth.uid == userId && (
         request.auth.token.email.lower() == 'libraryhumsj@gmail.com' ||
         request.auth.token.email.lower() == 'tutorialhumsj@gmail.com' ||
-        request.auth.token.email.lower() == 'traininghumsj@gmail.com' ||
+        request.auth.token.email.lower() == 'traininghumsj@gmail.com'
+      );
+      // Super admin can create/update any user's role
+      allow create, update: if isSuperAdmin();
+      allow delete: if false; // Prevent role deletion
+    }
+    
+    // Users collection - super_admin can read all users for management
+    match /users/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isSuperAdmin());
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && (
+        request.auth.uid == userId || 
         isSuperAdmin()
       );
-      // Super admin can update any user's role
-      allow update: if isSuperAdmin();
-      allow delete: if false; // Prevent role deletion
     }
     
     // Helper function to check if user has specific role

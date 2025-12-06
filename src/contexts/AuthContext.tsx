@@ -28,9 +28,9 @@ export const getAdminRoleFromEmail = (email: string): UserRole | null => {
 
 // Admin route permissions
 export const ADMIN_ROUTE_PERMISSIONS: Record<string, UserRole[]> = {
-  "/admin/library": ["library_admin", "super_admin"],
-  "/admin/tutorial": ["tutorial_admin", "super_admin"],
-  "/admin/training": ["training_admin", "super_admin"],
+  "/admin/library": ["library_admin", "librarian", "super_admin"],
+  "/admin/tutorial": ["tutorial_admin", "tutor", "super_admin"],
+  "/admin/training": ["training_admin", "trainer", "super_admin"],
   "/admin/resources": ["super_admin"],
   "/admin-dashboard": ["super_admin"],
 };
@@ -230,6 +230,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       assignedAt: new Date(),
       assignedBy: user.uid
     });
+
+    // Also update role in users collection for consistency
+    await setDoc(doc(db, "users", userId), { role }, { merge: true });
   };
 
   const getAllUsers = async (): Promise<Array<UserProfile & { email: string }>> => {

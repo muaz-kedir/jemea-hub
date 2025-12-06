@@ -12,7 +12,7 @@ const ImageUploader = ({ onUploadSuccess, folder = 'general' }) => {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   // API base URL - adjust based on your backend
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:5000');
 
   /**
    * Handle file selection

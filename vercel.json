@@ -1,5 +1,23 @@
 {
   "rewrites": [
+    { "source": "/api/resources/:id/ai/:action", "destination": "/api/resources/[id]/ai/[action]" },
+    { "source": "/api/resources/:id/ai", "destination": "/api/resources/[id]/ai" },
+    { "source": "/api/resources/:id", "destination": "/api/resources/[id]" },
+    { "source": "/api/resources", "destination": "/api/resources" },
+    { "source": "/api/notifications/send", "destination": "/api/notifications/send" },
+    { "source": "/api/upload", "destination": "/api/upload" },
+    { "source": "/api/health", "destination": "/api/health" },
     { "source": "/(.*)", "destination": "/" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Credentials", "value": "true" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PUT,DELETE,OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
+      ]
+    }
   ]
 }

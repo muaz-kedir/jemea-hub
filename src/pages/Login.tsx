@@ -26,31 +26,40 @@ const Login = () => {
       const userCredential = await signIn(email, password);
       toast.success("Logged in successfully!");
 
+      // Always fetch fresh role from Firestore (not cached)
       const roleDoc = await getDoc(doc(db, "user_roles", userCredential.user.uid));
       const role = (roleDoc.exists() ? roleDoc.data().role : "student") as UserRole;
 
-      // Handle admin roles with dedicated dashboards
-      const adminRoles: UserRole[] = ["super_admin", "library_admin", "tutorial_admin", "training_admin"];
-      
-      if (adminRoles.includes(role)) {
-        const dashboardRoute = getAdminDashboardRoute(role);
-        navigate(dashboardRoute, { replace: true });
-      } else {
-        // Handle other roles
-        switch (role) {
-          case "librarian":
-            navigate("/library-dashboard", { replace: true });
-            break;
-          case "tutor":
-            navigate("/tutor-dashboard", { replace: true });
-            break;
-          case "trainer":
-            navigate("/trainer-dashboard", { replace: true });
-            break;
-          default:
-            navigate("/landing", { replace: true });
-            break;
-        }
+      // Route based on role
+      switch (role) {
+        // Admin roles with dedicated dashboards
+        case "super_admin":
+          navigate("/admin-dashboard", { replace: true });
+          break;
+        case "library_admin":
+          navigate("/admin/library", { replace: true });
+          break;
+        case "tutorial_admin":
+          navigate("/admin/tutorial", { replace: true });
+          break;
+        case "training_admin":
+          navigate("/admin/training", { replace: true });
+          break;
+        // Staff roles
+        case "librarian":
+          navigate("/admin/library", { replace: true });
+          break;
+        case "tutor":
+          navigate("/tutor-dashboard", { replace: true });
+          break;
+        case "trainer":
+          navigate("/trainer-dashboard", { replace: true });
+          break;
+        // Default for students
+        case "student":
+        default:
+          navigate("/landing", { replace: true });
+          break;
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to log in";

@@ -1056,25 +1056,7 @@ const ResourceViewer = () => {
         </TabsList>
 
         <TabsContent value="viewer" className="mt-0">
-          {!isPdf && (
-            <Card className="p-8 text-center border-0 shadow-lg bg-secondary/20 space-y-4">
-              <p className="text-muted-foreground">
-                This resource is not a PDF or cannot be rendered inline.
-              </p>
-              <Button asChild>
-                <a
-                  href={resource.file.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  Open in new tab
-                </a>
-              </Button>
-            </Card>
-          )}
-
-          {isPdf && (
+          {isPdf ? (
             <Card className="border-0 shadow-lg bg-secondary/20 flex flex-col h-[70vh]">
               <div className="flex items-center justify-between px-4 py-2 border-b gap-4 flex-wrap">
                 <div className="flex items-center gap-2">
@@ -1150,6 +1132,33 @@ const ResourceViewer = () => {
                     renderAnnotationLayer={false}
                   />
                 </Document>
+              </div>
+            </Card>
+          ) : (
+            <Card className="border-0 shadow-lg bg-secondary/20 flex flex-col h-[70vh]">
+              <div className="flex items-center justify-between px-4 py-2 border-b">
+                <span className="text-sm font-medium">Document Viewer</span>
+                <span className="text-xs text-muted-foreground">
+                  {resource.file.format?.toUpperCase() || 'FILE'}
+                </span>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                {/* Use Microsoft Office Online viewer for Office files */}
+                {['pptx', 'ppt', 'docx', 'doc', 'xlsx', 'xls'].includes(
+                  resource.file.format?.toLowerCase() || ''
+                ) ? (
+                  <iframe
+                    src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(resource.file.url)}`}
+                    className="w-full h-full border-0"
+                    title={resource.title}
+                  />
+                ) : (
+                  <iframe
+                    src={`https://docs.google.com/viewer?url=${encodeURIComponent(resource.file.url)}&embedded=true`}
+                    className="w-full h-full border-0"
+                    title={resource.title}
+                  />
+                )}
               </div>
             </Card>
           )}

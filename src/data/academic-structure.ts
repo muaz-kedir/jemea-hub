@@ -40,12 +40,12 @@ const baseSemesters: AcademicSemester[] = [
   { 
     id: 'semester-1', 
     name: 'Semester 1',
-    courses: [] // Will be populated per department
+    courses: []
   },
   { 
     id: 'semester-2', 
     name: 'Semester 2',
-    courses: [] // Will be populated per department
+    courses: []
   },
 ];
 
@@ -114,24 +114,24 @@ export const academicColleges: AcademicCollege[] = [
         years: createYears('accounting', 4),
       },
       {
-        id: 'dept-business-management',
-        name: 'Business Management',
-        years: createYears('business', 4),
+        id: 'dept-cooperatives',
+        name: 'Cooperatives',
+        years: createYears('cooperatives', 4),
       },
       {
         id: 'dept-economics',
         name: 'Economics',
-        years: createYears('economics', 6),
+        years: createYears('economics', 4),
+      },
+      {
+        id: 'dept-management',
+        name: 'Management',
+        years: createYears('management', 4),
       },
       {
         id: 'dept-public-administration',
         name: 'Public Administration and Development Management',
-        years: createYears('publicadmin', 6),
-      },
-      {
-        id: 'dept-marketing-management',
-        name: 'Marketing Management',
-        years: createYears('marketing', 6),
+        years: createYears('publicadmin', 4),
       },
     ],
   },
@@ -142,17 +142,17 @@ export const academicColleges: AcademicCollege[] = [
       {
         id: 'dept-computer-science',
         name: 'Computer Science',
-        years: createYears('cs', 6),
+        years: createYears('cs', 4),
       },
       {
         id: 'dept-information-systems',
         name: 'Information Systems',
-        years: createYears('is', 6),
+        years: createYears('is', 4),
       },
       {
         id: 'dept-information-technology',
         name: 'Information Technology',
-        years: createYears('it', 6),
+        years: createYears('it', 4),
       },
       {
         id: 'dept-software-engineering',
@@ -162,43 +162,38 @@ export const academicColleges: AcademicCollege[] = [
       {
         id: 'dept-information-science',
         name: 'Information Science',
-        years: createYears('infoscience', 6),
+        years: createYears('infoscience', 4),
       },
       {
         id: 'dept-statistics-computing',
         name: 'Statistics',
-        years: createYears('stats', 6),
+        years: createYears('stats', 4),
       },
     ],
   },
   {
     id: 'college-education-behavioral',
-    name: 'College of Education and Behavioral Science',
+    name: 'College of Educational and Behavioral Science',
     departments: [
+      {
+        id: 'dept-adult-education',
+        name: 'Adult Education and Community Development',
+        years: createYears('adulted', 4),
+      },
       {
         id: 'dept-educational-planning',
         name: 'Educational Planning and Management',
-        years: createYears('edplan', 6),
-      },
-      {
-        id: 'dept-curriculum-instruction',
-        name: 'Curriculum and Instruction',
-        years: createYears('curriculum', 6),
+        years: createYears('edplan', 4),
       },
       {
         id: 'dept-psychology',
         name: 'Psychology',
-        years: createYears('psych', 6),
-      },
-      {
-        id: 'dept-adult-education',
-        name: 'Adult and Lifelong Learning',
-        years: createYears('adulted', 6),
+        years: createYears('psych', 4),
       },
       {
         id: 'dept-special-needs-education',
-        name: 'Special Needs Education',
-        years: createYears('specialed', 6),
+        name: 'Special Needs and Inclusive Education',
+        years: createYears('specialed', 4),
       },
     ],
   },
@@ -209,58 +204,63 @@ export const academicColleges: AcademicCollege[] = [
       {
         id: 'dept-mathematics',
         name: 'Mathematics',
-        years: createYears('math', 6),
+        years: createYears('math', 4),
       },
       {
         id: 'dept-physics',
         name: 'Physics',
-        years: createYears('physics', 6),
+        years: createYears('physics', 4),
       },
       {
         id: 'dept-chemistry',
         name: 'Chemistry',
-        years: createYears('chem', 6),
+        years: createYears('chem', 4),
       },
       {
         id: 'dept-biology',
         name: 'Biology',
-        years: createYears('bio', 6),
+        years: createYears('bio', 4),
       },
       {
-        id: 'dept-statistics',
-        name: 'Statistics',
-        years: createYears('statistics', 6),
+        id: 'dept-biotechnology',
+        name: 'Biotechnology',
+        years: createYears('biotech', 4),
       },
     ],
   },
   {
-    id: 'college-social-science-humanity',
-    name: 'College of Social Science and Humanity',
+    id: 'college-social-science',
+    name: 'College of Social Science',
     departments: [
-      {
-        id: 'dept-sociology',
-        name: 'Sociology',
-        years: createYears('sociology', 6),
-      },
-      {
-        id: 'dept-history',
-        name: 'History',
-        years: createYears('history', 6),
-      },
       {
         id: 'dept-geography',
         name: 'Geography and Environmental Studies',
-        years: createYears('geography', 6),
+        years: createYears('geography', 4),
       },
       {
-        id: 'dept-english-language',
-        name: 'English Language and Literature',
-        years: createYears('english', 6),
+        id: 'dept-history',
+        name: 'History and Heritage Management',
+        years: createYears('history', 4),
       },
       {
-        id: 'dept-civics-ethics',
-        name: 'Civics and Ethical Studies',
-        years: createYears('civics', 6),
+        id: 'dept-foreign-language',
+        name: 'Foreign Language Studies',
+        years: createYears('foreignlang', 4),
+      },
+      {
+        id: 'dept-afaan-oromoo',
+        name: 'Afaan Oromoo',
+        years: createYears('afaanoromoo', 4),
+      },
+      {
+        id: 'dept-gender-development',
+        name: 'Gender and Development Studies',
+        years: createYears('gender', 4),
+      },
+      {
+        id: 'dept-sociology',
+        name: 'Sociology',
+        years: createYears('sociology', 4),
       },
     ],
   },
@@ -282,16 +282,17 @@ export const academicColleges: AcademicCollege[] = [
       {
         id: 'dept-sport-science',
         name: 'Sport Science',
-        years: createYears('sports', 6),
+        years: createYears('sports', 4),
       },
       {
         id: 'dept-physical-education',
         name: 'Physical Education',
-        years: createYears('pe', 6),
+        years: createYears('pe', 4),
       },
     ],
   },
 ];
+
 
 export const yearOptions = academicColleges[0]?.departments[0]?.years.map((year) => ({ id: year.id, name: year.name })) || [];
 export const semesterOptions = baseSemesters.map((semester) => ({ id: semester.id, name: semester.name }));
@@ -306,7 +307,7 @@ export const getDepartmentById = (collegeId: string, departmentId: string) => {
 
 export const getCoursesByDepartmentAndSemester = (collegeId: string, departmentId: string, semesterId: string) => {
   const department = getDepartmentById(collegeId, departmentId);
-  const year = department?.years[0]; // Get first year as example
+  const year = department?.years[0];
   const semester = year?.semesters.find((s) => s.id === semesterId);
   return semester?.courses || [];
 };

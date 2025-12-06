@@ -20,11 +20,25 @@ const defaultOrigins = [
   'http://localhost:8080',
   'http://localhost:5173',
   'http://localhost:3000',
+  // Production domains - add your Vercel domains here
+  'https://jemea-hub.vercel.app',
+  'https://jemea-hub-git-main.vercel.app',
+  /\.vercel\.app$/,  // Allow all Vercel preview deployments
 ].filter(Boolean);
 
-const allowedOrigins = defaultOrigins
-  .flatMap((origin) => origin.split(',').map((item) => item.trim()))
-  .filter(Boolean);
+// Separate string origins and regex patterns
+const stringOrigins = [];
+const regexOrigins = [];
+
+defaultOrigins.forEach((origin) => {
+  if (origin instanceof RegExp) {
+    regexOrigins.push(origin);
+  } else if (typeof origin === 'string') {
+    origin.split(',').map((item) => item.trim()).filter(Boolean).forEach((o) => {
+      stringOrigins.push(o);
+    });
+  }
+});
 
 const corsOptions = {
   origin(origin, callback) {
@@ -38,8 +52,16 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    if (allowedOrigins.includes(origin)) {
+    // Check string origins
+    if (stringOrigins.includes(origin)) {
       return callback(null, true);
+    }
+
+    // Check regex patterns
+    for (const regex of regexOrigins) {
+      if (regex.test(origin)) {
+        return callback(null, true);
+      }
     }
 
     console.warn(`🚫 CORS blocked request from origin: ${origin}`);

@@ -1,16 +1,22 @@
 <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
   <!-- Background -->
-  <rect width="32" height="32" fill="#1A9BA8" rx="4"/>
+  <rect width="32" height="32" fill="#1A9BA8" rx="6"/>
   
-  <!-- Simplified Mosque Dome -->
-  <path d="M 8 12 Q 16 8 24 12 L 24 18 L 8 18 Z" fill="none" stroke="white" stroke-width="2"/>
+  <!-- Mosque Dome -->
+  <path d="M 6 14 Q 16 8 26 14 L 26 20 L 6 20 Z" fill="white"/>
+  
+  <!-- Minaret Left -->
+  <rect x="4" y="12" width="4" height="14" fill="white"/>
+  <path d="M 6 12 L 4 14 L 8 14 Z" fill="white"/>
+  
+  <!-- Minaret Right -->
+  <rect x="24" y="12" width="4" height="14" fill="white"/>
+  <path d="M 26 12 L 24 14 L 28 14 Z" fill="white"/>
   
   <!-- Crescent -->
-  <path d="M 16 6 Q 14 5 13 6 Q 14 7 16 6 Q 17 4 16 3 Q 15 4 16 6" fill="white"/>
+  <circle cx="16" cy="6" r="2.5" fill="white"/>
+  <circle cx="17" cy="5.5" r="2" fill="#1A9BA8"/>
   
-  <!-- Star -->
-  <path d="M 17 5 L 17.5 5.5 L 17.2 5 L 18 5 L 17.5 4.7 L 17.6 4 L 17 4.5 L 16.4 4 L 16.5 4.7 L 16 5 L 16.8 5 Z" fill="white"/>
-  
-  <!-- HUMSJ Text -->
-  <text x="16" y="28" font-size="8" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial, sans-serif">HUMSJ</text>
+  <!-- Base -->
+  <rect x="4" y="26" width="24" height="3" fill="white" rx="1"/>
 </svg>

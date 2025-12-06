@@ -1,6 +1,26 @@
 import type { ClassifiedResource, ClassifiedResourceFilters } from '@/types/resources';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// API URL configuration - uses same origin in production (Vercel serverless functions)
+const getApiUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  
+  // If VITE_API_URL is set, use it
+  if (envUrl) {
+    console.log('[resourceService] Using API URL from env:', envUrl);
+    return envUrl;
+  }
+  
+  // In production on Vercel, use same origin (serverless functions at /api)
+  if (import.meta.env.PROD) {
+    console.log('[resourceService] Production mode - using same origin for API');
+    return ''; // Empty string means same origin
+  }
+  
+  // Default for development - use local Express server
+  return 'http://localhost:5000';
+};
+
+const API_URL = getApiUrl();
 
 export interface Flashcard {
   id: string;
@@ -57,27 +77,63 @@ const parseResource = (raw: any): ClassifiedResource => {
 
 export const fetchResources = async (filters: ClassifiedResourceFilters = {}): Promise<ClassifiedResource[]> => {
   const query = toQueryString(filters);
-  const response = await fetch(`${API_URL}/api/resources${query ? `?${query}` : ''}`);
+  const url = `${API_URL}/api/resources${query ? `?${query}` : ''}`;
+  
+  console.log('[fetchResources] Request URL:', url);
+  console.log('[fetchResources] Filters:', filters);
+  
+  // API_URL can be empty string in production (same origin)
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.error || 'Failed to fetch resources');
+  try {
+    const response = await fetch(url);
+    
+    console.log('[fetchResources] Response status:', response.status);
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      console.error('[fetchResources] Error response:', error);
+      throw new Error(error.error || `Failed to fetch resources (${response.status})`);
+    }
+
+    const data = await response.json();
+    console.log('[fetchResources] Success, count:', data.data?.length || 0);
+    return Array.isArray(data.data) ? data.data.map(parseResource) : [];
+  } catch (error) {
+    console.error('[fetchResources] Fetch error:', error);
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      throw new Error('Unable to connect to the server. Please check if the backend is running and CORS is configured.');
+    }
+    throw error;
   }
-
-  const data = await response.json();
-  return Array.isArray(data.data) ? data.data.map(parseResource) : [];
 };
 
 export const getResourceById = async (id: string): Promise<ClassifiedResource> => {
-  const response = await fetch(`${API_URL}/api/resources/${id}`);
+  const url = `${API_URL}/api/resources/${id}`;
+  
+  console.log('[getResourceById] Request URL:', url);
+  
+  // API_URL can be empty string in production (same origin)
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.error || 'Failed to fetch resource');
+  try {
+    const response = await fetch(url);
+    
+    console.log('[getResourceById] Response status:', response.status);
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      console.error('[getResourceById] Error response:', error);
+      throw new Error(error.error || `Failed to fetch resource (${response.status})`);
+    }
+
+    const data = await response.json();
+    return parseResource(data.data);
+  } catch (error) {
+    console.error('[getResourceById] Fetch error:', error);
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      throw new Error('Unable to connect to the server. Please check if the backend is running.');
+    }
+    throw error;
   }
-
-  const data = await response.json();
-  return parseResource(data.data);
 };
 
 export interface ResourceAIData {

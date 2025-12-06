@@ -128,6 +128,8 @@ router.post('/resources', resourceUpload.single('file'), async (req, res) => {
 });
 
 router.get('/resources', async (req, res) => {
+  console.log('📥 GET /resources - Query params:', req.query);
+  
   if (!ensureFirestoreConfigured(res)) return;
 
   try {
@@ -167,6 +169,8 @@ router.get('/resources', async (req, res) => {
       const bTime = b.createdAt?.toMillis?.() || 0;
       return bTime - aTime;
     });
+
+    console.log(`✅ GET /resources - Found ${resources.length} resources`);
 
     res.status(200).json({
       success: true,

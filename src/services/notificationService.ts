@@ -2,7 +2,8 @@ import { db } from "@/lib/firebase";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { NotificationType } from "@/contexts/NotificationContext";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+// API URL - uses same origin in production (Vercel serverless functions)
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "" : "http://localhost:5000");
 
 interface CreateNotificationParams {
   title: string;

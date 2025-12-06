@@ -161,7 +161,7 @@ const TutorialAdminDashboard = () => {
   };
 
   const uploadImage = async (file: File): Promise<string> => {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:5000');
     
     const formData = new FormData();
     formData.append('image', file);
