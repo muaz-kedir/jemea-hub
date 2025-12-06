@@ -14,19 +14,14 @@ import {
   UserCheck,
   Settings,
   BarChart3,
-  Clock,
-  Bell,
-  ArrowRight,
-  Calendar,
-  FileText
+  Clock
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 
 const AdminDashboard = () => {
   const { userProfile, getAllUsers } = useAuth();
@@ -320,16 +315,10 @@ const AdminDashboard = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="mb-4 p-3 bg-secondary rounded-lg">
+                    <div className="p-3 bg-secondary rounded-lg">
                       <p className="text-xs text-muted-foreground mb-1">Recent Activity</p>
                       <p className="text-sm font-medium truncate">{dashboard.stats.recent}</p>
                     </div>
-                    <Link to={dashboard.path}>
-                      <Button className="w-full" size="lg">
-                        Go to Dashboard
-                        <ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
-                    </Link>
                   </Card>
                 );
               })}
