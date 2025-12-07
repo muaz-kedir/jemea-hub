@@ -245,21 +245,45 @@ export const chatWithResource = async (
   question: string,
   chatHistory: ChatMessage[] = []
 ): Promise<{ answer: string; resourceTitle: string }> => {
-  const response = await fetch(`${API_URL}/api/resources/${id}/ai/chat`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ question, chatHistory }),
-  });
+  const url = `${API_URL}/api/resources/${id}/ai/chat`;
+  console.log('[chatWithResource] Request URL:', url);
+  console.log('[chatWithResource] Question:', question.slice(0, 100));
+  
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ question, chatHistory }),
+    });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.error || 'Failed to get response');
+    console.log('[chatWithResource] Response status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[chatWithResource] Error response:', errorText);
+      
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { error: errorText || `HTTP ${response.status}` };
+      }
+      
+      throw new Error(errorData.error || `Failed to get response (${response.status})`);
+    }
+
+    const data = await response.json();
+    console.log('[chatWithResource] Success, answer length:', data.data?.answer?.length);
+    return data.data as { answer: string; resourceTitle: string };
+  } catch (error) {
+    console.error('[chatWithResource] Fetch error:', error);
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      throw new Error('Unable to connect to the AI service. Please check your connection.');
+    }
+    throw error;
   }
-
-  const data = await response.json();
-  return data.data as { answer: string; resourceTitle: string };
 };
 
 export interface CreateResourcePayload {
