@@ -11,8 +11,10 @@ const ImageUploader = ({ onUploadSuccess, folder = 'general' }) => {
   const [error, setError] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  // API base URL - adjust based on your backend
-  const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:5000');
+  // API base URL - uses same origin in production (Vercel serverless functions)
+  const isLocalhost = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const API_URL = import.meta.env.VITE_API_URL || (isLocalhost ? 'http://localhost:5000' : '');
 
   /**
    * Handle file selection

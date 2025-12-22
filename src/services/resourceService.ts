@@ -2,21 +2,26 @@ import type { ClassifiedResource, ClassifiedResourceFilters } from '@/types/reso
 
 // API URL configuration - uses same origin in production (Vercel serverless functions)
 const getApiUrl = () => {
+  // Check if we're running on localhost (development)
+  const isLocalhost = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  
   const envUrl = import.meta.env.VITE_API_URL;
   
-  // If VITE_API_URL is set, use it
+  // If VITE_API_URL is explicitly set, use it
   if (envUrl) {
     console.log('[resourceService] Using API URL from env:', envUrl);
     return envUrl;
   }
   
-  // In production on Vercel, use same origin (serverless functions at /api)
-  if (import.meta.env.PROD) {
+  // If NOT on localhost, use same origin (Vercel serverless functions at /api)
+  if (!isLocalhost) {
     console.log('[resourceService] Production mode - using same origin for API');
     return ''; // Empty string means same origin
   }
   
-  // Default for development - use local Express server
+  // On localhost - use local Express server
+  console.log('[resourceService] Development mode - using localhost:5000');
   return 'http://localhost:5000';
 };
 

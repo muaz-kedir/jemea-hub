@@ -144,7 +144,9 @@ const TrainingRegistration = () => {
 
       await addDoc(collection(db, "trainings", trainingId, "registrations"), registrationData);
 
-      const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:5000');
+      const isLocalhost = typeof window !== 'undefined' && 
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      const API_URL = import.meta.env.VITE_API_URL || (isLocalhost ? 'http://localhost:5000' : '');
 
       try {
         await fetch(`${API_URL}/api/notify/registration`, {
